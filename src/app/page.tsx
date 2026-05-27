@@ -1,65 +1,173 @@
-import Image from "next/image";
+'use client';
+import { useEffect, useState } from 'react';
+import { ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES } from '@/types';
+import { tempMessage, suggestOutfits } from '@/lib/suggest';
+import { storage } from '@/lib/clientStorage';
+import OutfitCard from './OutfitCard';
 
 export default function Home() {
+  const [maxTemp, setMaxTemp] = useState('');
+  const [minTemp, setMinTemp] = useState('');
+  const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
+  const [allPurposes, setAllPurposes] = useState<string[]>(DEFAULT_PURPOSES);
+  const [record, setRecord] = useState<OutfitRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const clothes: ClothingItem[] = storage.clothes.getAll();
+    const custom = clothes.flatMap((c) => c.purposeTags ?? []);
+    const merged = [...new Set([...DEFAULT_PURPOSES, ...custom])];
+    setAllPurposes(merged);
+  }, []);
+
+  function togglePurpose(p: string) {
+    setSelectedPurposes((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const clothes     = storage.clothes.getAll();
+      const colorRules  = storage.colorRules.getAll();
+      const pastRecords = storage.suggestions.getAll();
+
+      const result = suggestOutfits({
+        clothes,
+        maxTemp:  Number(maxTemp),
+        minTemp:  Number(minTemp),
+        purposes: selectedPurposes,
+        colorRules,
+        pastRecords,
+      });
+
+      const newRecord: OutfitRecord = {
+        id:        crypto.randomUUID(),
+        date:      new Date().toISOString().slice(0, 10),
+        maxTemp:   Number(maxTemp),
+        minTemp:   Number(minTemp),
+        purposes:  selectedPurposes,
+        outfits:   result.outfits,
+        feedbacks: [],
+        relaxed:   result.relaxed,
+        createdAt: new Date().toISOString(),
+      };
+
+      storage.suggestions.create(newRecord);
+      setRecord(newRecord);
+    } catch {
+      setError('提案の生成に失敗しました。服が登録されているか確認してください。');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleFeedback(outfitIndex: number, type: FeedbackType) {
+    if (!record) return;
+    const updated = storage.suggestions.toggleFeedback(record.id, outfitIndex, type);
+    if (updated) setRecord({ ...updated });
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div>
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">今日のコーデを探す</h1>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm mb-6 space-y-4">
+        {/* 気温 */}
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">最高気温 (°C)</label>
+            <input type="number" value={maxTemp} onChange={(e) => setMaxTemp(e.target.value)}
+              placeholder="例: 25" required
+              className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">最低気温 (°C)</label>
+            <input type="number" value={minTemp} onChange={(e) => setMinTemp(e.target.value)}
+              placeholder="例: 15" required
+              className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          </div>
+        </div>
+
+        {/* 用途タグ */}
+        <div>
+          <p className="text-sm font-medium text-slate-700 mb-2">
+            今日はどんなシーン？
+            <span className="text-slate-400 font-normal ml-1">（任意）</span>
           </p>
+          <div className="flex flex-wrap gap-2">
+            {allPurposes.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => togglePurpose(p)}
+                className={[
+                  'px-3 py-1.5 rounded-full text-sm border transition-colors',
+                  selectedPurposes.includes(p)
+                    ? 'bg-rose-500 text-white border-rose-500'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+                ].join(' ')}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <button type="submit" disabled={loading}
+          className="bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+          {loading ? '生成中...' : 'コーデを提案する'}
+        </button>
+      </form>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 text-sm p-4 rounded-lg mb-6">{error}</div>
+      )}
+
+      {record && (
+        <div>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <p className="text-sm text-slate-500">{tempMessage(record.maxTemp, record.minTemp)}</p>
+            {record.relaxed && (
+              <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
+                ⚠️ 色ルールの条件を少し緩めました
+              </span>
+            )}
+            {record.purposes.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {record.purposes.map((p) => (
+                  <span key={p} className="text-xs bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full border border-rose-100">
+                    {p}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {record.outfits.length === 0 ? (
+            <div className="text-center py-16 text-slate-400">
+              <p className="text-lg mb-1">提案できるコーデがありません</p>
+              <p className="text-sm">この気温に合う服を登録してください</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {record.outfits.map((outfit, i) => (
+                <OutfitCard
+                  key={i}
+                  outfit={outfit}
+                  index={i}
+                  feedbacks={record.feedbacks.filter((f) => f.outfitIndex === i).map((f) => f.type)}
+                  onFeedback={(type) => handleFeedback(i, type)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      </main>
+      )}
     </div>
   );
 }
