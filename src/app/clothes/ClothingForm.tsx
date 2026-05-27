@@ -95,11 +95,27 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
     setUploading(true);
     setUploadError('');
     try {
-      // サーバー不要: FileReader で base64 データURLに変換してそのまま保存
+      // FileReader で読み込んだあと Canvas でリサイズ・圧縮する
+      // iPhone Safari の localStorage 上限（約5MB）対策
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload  = () => resolve(reader.result as string);
         reader.onerror = () => reject(new Error('読み込みに失敗しました'));
+        reader.onload  = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error('画像の処理に失敗しました'));
+          img.onload  = () => {
+            // 長辺を最大 800px に縮小（それ以下はそのまま）
+            const MAX = 800;
+            const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+            const canvas = document.createElement('canvas');
+            canvas.width  = Math.round(img.width  * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // JPEG 品質 75% → 典型的な服の写真で 50〜150KB 程度に収まる
+            resolve(canvas.toDataURL('image/jpeg', 0.75));
+          };
+          img.src = reader.result as string;
+        };
         reader.readAsDataURL(file);
       });
       set('photoUrl', dataUrl);

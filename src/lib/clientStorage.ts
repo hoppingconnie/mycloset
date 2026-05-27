@@ -28,7 +28,16 @@ function load<T>(key: string, fallback: T): T {
 }
 
 function save<T>(key: string, data: T): void {
-  localStorage.setItem(key, JSON.stringify(data));
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    // QuotaExceededError: Safari の容量上限（約5MB）に達した場合
+    const name = e instanceof Error ? e.name : '';
+    if (name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      throw new Error('保存容量が上限に達しました。⚙️ データ管理から不要なデータを削除するか、写真のない服を登録してください。');
+    }
+    throw e;
+  }
 }
 
 export const storage = {

@@ -3,9 +3,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
-  { href: '/',            label: 'コーデ提案', icon: '👗' },
-  { href: '/clothes',     label: '服の管理',   icon: '🧺' },
-  { href: '/color-rules', label: '色ルール',   icon: '🎨' },
+  { href: '/',            label: 'コーデ', icon: '👗' },
+  { href: '/clothes',     label: '服管理', icon: '🧺' },
+  { href: '/color-rules', label: '色ルール', icon: '🎨' },
+  { href: '/settings',    label: 'データ', icon: '⚙️' },
 ] as const;
 
 export default function BottomNav() {
@@ -24,13 +25,13 @@ export default function BottomNav() {
               key={href}
               href={href}
               className={[
-                'flex-1 flex flex-col items-center justify-center py-2 gap-0.5',
-                'text-xs font-medium transition-colors',
+                'flex-1 min-w-0 flex flex-col items-center justify-center py-2 gap-0.5',
+                'transition-colors',
                 active ? 'text-rose-600' : 'text-slate-400',
               ].join(' ')}
             >
-              <span className="text-2xl leading-none">{icon}</span>
-              <span>{label}</span>
+              <span className="text-xl leading-none">{icon}</span>
+              <span className="text-[10px] font-medium leading-tight">{label}</span>
             </Link>
           );
         })}
