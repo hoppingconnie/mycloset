@@ -200,29 +200,26 @@ function selectDiverse(
   return result;
 }
 
-// ── メインエクスポート ─────────────────────────────────────────────────────────
+// ── 候補生成ヘルパー ───────────────────────────────────────────────────────────
 
-export interface SuggestResult {
-  outfits: Outfit[];
-  relaxed: boolean;
-}
-
-export function suggestOutfits(params: {
-  clothes: ClothingItem[];
-  maxTemp: number;
-  minTemp: number;
-  purposes: string[];
-  colorRules: ColorRule[];
-  pastRecords: OutfitRecord[];
-}): SuggestResult {
-  const { clothes, maxTemp, minTemp, purposes, colorRules, pastRecords } = params;
-
-  const tThick = topThickness(maxTemp);
-  const needOuter = minTemp < 18;
-  const oThick = outerThickness(minTemp);
-  const itemScores = buildItemScores(pastRecords);
-
-  // スコア順にソートされたプールを返すヘルパー
+function buildCandidates(
+  clothes: ClothingItem[],
+  tThick: Thickness[] | null, // null = 厚さ制限なし
+  needOuter: boolean,
+  oThick: Thickness[],
+  purposes: string[],
+  itemScores: Map<string, number>,
+  minTemp: number,
+): {
+  candidates: Outfit[];
+  topsAll: number;
+  topsInTemp: number;
+  dressesAll: number;
+  dressesInTemp: number;
+  bottoms: number;
+  shoes: number;
+  outersAvailable: number;
+} {
   function sortedPool(items: ClothingItem[]): ClothingItem[] {
     return [...items].sort((a, b) => {
       const sa = (itemScores.get(a.id) ?? 0) + purposeBonus(a, purposes);
@@ -231,10 +228,16 @@ export function suggestOutfits(params: {
     });
   }
 
-  const tops = sortedPool(clothes.filter((c) => c.category === 'top' && tThick.includes(c.thickness)));
+  const allTops    = clothes.filter((c) => c.category === 'top');
+  const allDresses = clothes.filter((c) => c.category === 'dress');
+
+  const topsInTemp    = tThick ? allTops.filter((c) => tThick.includes(c.thickness)) : allTops;
+  const dressesInTemp = tThick ? allDresses.filter((c) => tThick.includes(c.thickness)) : allDresses;
+
+  const tops    = sortedPool(topsInTemp);
   const bottoms = sortedPool(clothes.filter((c) => c.category === 'bottom'));
-  const dresses = sortedPool(clothes.filter((c) => c.category === 'dress' && tThick.includes(c.thickness)));
-  // 春〜秋 (minTemp >= 10°C) はジャケットを優先、冬はアウターを優先してソート
+  const dresses = sortedPool(dressesInTemp);
+
   const outerRaw = needOuter
     ? clothes.filter(
         (c) => (c.category === 'outer' || c.category === 'jacket') && oThick.includes(c.thickness)
@@ -250,48 +253,146 @@ export function suggestOutfits(params: {
   const shoes = sortedPool(clothes.filter((c) => c.category === 'shoes'));
 
   const hasTopBottom = tops.length > 0 && bottoms.length > 0;
-  const hasDress = dresses.length > 0;
-  if (!hasTopBottom && !hasDress) return { outfits: [], relaxed: false };
+  const hasDress     = dresses.length > 0;
 
-  // 候補生成（各カテゴリ上位N件の直積）
-  const outerPool: (ClothingItem | undefined)[] = outers.length ? outers.slice(0, 4) : [undefined];
-  const shoesPool: (ClothingItem | undefined)[] = shoes.length ? shoes.slice(0, 4) : [undefined];
   const candidates: Outfit[] = [];
 
-  if (hasTopBottom) {
-    for (const top of tops.slice(0, 6)) {
-      for (const bottom of bottoms.slice(0, 6)) {
+  if (hasTopBottom || hasDress) {
+    const outerPool: (ClothingItem | undefined)[] = outers.length ? outers.slice(0, 4) : [undefined];
+    const shoesPool: (ClothingItem | undefined)[] = shoes.length ? shoes.slice(0, 4) : [undefined];
+
+    if (hasTopBottom) {
+      for (const top of tops.slice(0, 6)) {
+        for (const bottom of bottoms.slice(0, 6)) {
+          for (const outer of outerPool) {
+            for (const shoe of shoesPool) {
+              candidates.push({ top, bottom, outer, shoes: shoe });
+            }
+          }
+        }
+      }
+    }
+    if (hasDress) {
+      for (const dress of dresses.slice(0, 5)) {
         for (const outer of outerPool) {
           for (const shoe of shoesPool) {
-            candidates.push({ top, bottom, outer, shoes: shoe });
+            candidates.push({ dress, outer, shoes: shoe });
           }
         }
       }
     }
   }
-  if (hasDress) {
-    for (const dress of dresses.slice(0, 5)) {
-      for (const outer of outerPool) {
-        for (const shoe of shoesPool) {
-          candidates.push({ dress, outer, shoes: shoe });
-        }
-      }
+
+  return {
+    candidates,
+    topsAll:         allTops.length,
+    topsInTemp:      topsInTemp.length,
+    dressesAll:      allDresses.length,
+    dressesInTemp:   dressesInTemp.length,
+    bottoms:         bottoms.length,
+    shoes:           shoes.length,
+    outersAvailable: outerRaw.length,
+  };
+}
+
+// ── メインエクスポート ─────────────────────────────────────────────────────────
+
+export interface Diagnostics {
+  totalClothes: number;
+  topsAll: number;
+  topsInTemp: number;
+  dressesAll: number;
+  dressesInTemp: number;
+  bottoms: number;
+  shoes: number;
+  outersNeeded: boolean;
+  outersAvailable: number;
+  candidates: number;
+  validCandidates: number;
+}
+
+export interface SuggestResult {
+  outfits: Outfit[];
+  relaxed: boolean;
+  /** 0=通常, 1=厚さ条件を緩和, 2=アウター任意化 */
+  fallbackLevel: 0 | 1 | 2;
+  diagnostics: Diagnostics;
+}
+
+export function suggestOutfits(params: {
+  clothes: ClothingItem[];
+  maxTemp: number;
+  minTemp: number;
+  purposes: string[];
+  colorRules: ColorRule[];
+  pastRecords: OutfitRecord[];
+}): SuggestResult {
+  const { clothes, maxTemp, minTemp, purposes, colorRules, pastRecords } = params;
+
+  const tThick   = topThickness(maxTemp);
+  const needOuter = minTemp < 18;
+  const oThick   = outerThickness(minTemp);
+  const itemScores = buildItemScores(pastRecords);
+
+  function tryGenerate(
+    thicknessFilter: Thickness[] | null,
+    forceNoOuter: boolean,
+  ): { outfits: Outfit[]; relaxed: boolean; diagnostics: Diagnostics } {
+    const useOuter = !forceNoOuter && needOuter;
+    const info = buildCandidates(clothes, thicknessFilter, useOuter, oThick, purposes, itemScores, minTemp);
+
+    const diagnostics: Diagnostics = {
+      totalClothes:    clothes.length,
+      topsAll:         info.topsAll,
+      topsInTemp:      info.topsInTemp,
+      dressesAll:      info.dressesAll,
+      dressesInTemp:   info.dressesInTemp,
+      bottoms:         info.bottoms,
+      shoes:           info.shoes,
+      outersNeeded:    needOuter,
+      outersAvailable: info.outersAvailable,
+      candidates:      info.candidates.length,
+      validCandidates: 0,
+    };
+
+    if (info.candidates.length === 0) {
+      return { outfits: [], relaxed: false, diagnostics };
+    }
+
+    const scored = info.candidates
+      .map((outfit) => ({ outfit, score: scoreOutfit(outfit, purposes, colorRules, itemScores) }))
+      .sort((a, b) => b.score - a.score);
+
+    const valid = scored.filter((s) => s.score > HARD_THRESHOLD);
+    diagnostics.validCandidates = valid.length;
+
+    if (valid.length > 0) {
+      return { outfits: selectDiverse(valid, 3), relaxed: false, diagnostics };
+    } else {
+      return { outfits: selectDiverse(scored, 3), relaxed: true, diagnostics };
     }
   }
 
-  // スコアリング & ソート
-  const scored = candidates
-    .map((outfit) => ({ outfit, score: scoreOutfit(outfit, purposes, colorRules, itemScores) }))
-    .sort((a, b) => b.score - a.score);
-
-  const valid = scored.filter((s) => s.score > HARD_THRESHOLD);
-
-  // 有効な候補が1件以上あればそれだけを表示、ゼロなら条件を緩めて全候補から選ぶ
-  if (valid.length > 0) {
-    return { outfits: selectDiverse(valid, 3), relaxed: false };
-  } else {
-    return { outfits: selectDiverse(scored, 3), relaxed: true };
+  // Level 0: 通常（気温に合った厚さ + アウター）
+  const l0 = tryGenerate(tThick, false);
+  if (l0.outfits.length > 0) {
+    return { ...l0, fallbackLevel: 0 };
   }
+
+  // Level 1: 厚さ制限を緩和（全トップス・ワンピースを候補に）
+  const l1 = tryGenerate(null, false);
+  if (l1.outfits.length > 0) {
+    return { ...l1, fallbackLevel: 1 };
+  }
+
+  // Level 2: 厚さ制限を緩和 + アウター任意化
+  const l2 = tryGenerate(null, true);
+  if (l2.outfits.length > 0) {
+    return { ...l2, fallbackLevel: 2 };
+  }
+
+  // すべて失敗 — diagnostics だけ返す
+  return { outfits: [], relaxed: false, fallbackLevel: 0, diagnostics: l0.diagnostics };
 }
 
 // ── UI ヘルパー ────────────────────────────────────────────────────────────────

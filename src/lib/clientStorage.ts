@@ -7,6 +7,7 @@ import {
   ClothingItem,
   ColorRule,
   FeedbackType,
+  Outfit,
   OutfitRecord,
   PURPOSE_TAG_MIGRATION,
 } from '@/types';
@@ -38,6 +39,34 @@ function save<T>(key: string, data: T): void {
     }
     throw e;
   }
+}
+
+// ── 提案履歴の写真除去（localStorage 5MB 上限対策） ─────────────────────────────
+// OutfitRecord に ClothingItem の photoUrl（base64）が含まれると
+// 1 件あたり数百 KB になり、iPhone Safari の 5MB 上限をすぐに超える。
+// 写真は wardrobe:clothes に保存済みのため、履歴側には不要。
+function stripPhoto(item: ClothingItem | undefined): ClothingItem | undefined {
+  if (!item) return undefined;
+  const { photoUrl: _p, ...rest } = item;   // photoUrl を除いた残りだけ返す
+  return rest as ClothingItem;
+}
+function stripOutfitPhotos(outfit: Outfit): Outfit {
+  return {
+    top:    stripPhoto(outfit.top),
+    bottom: stripPhoto(outfit.bottom),
+    dress:  stripPhoto(outfit.dress),
+    outer:  stripPhoto(outfit.outer),
+    shoes:  stripPhoto(outfit.shoes),
+  };
+}
+function stripRecordPhotos(r: OutfitRecord): OutfitRecord {
+  return {
+    ...r,
+    outfits:   (r.outfits   ?? []).map(stripOutfitPhotos),
+    feedbacks: r.feedbacks  ?? [],
+    purposes:  r.purposes   ?? [],
+    relaxed:   r.relaxed    ?? false,
+  };
 }
 
 export const storage = {
@@ -78,24 +107,22 @@ export const storage = {
 
   suggestions: {
     getAll(): OutfitRecord[] {
-      return load<OutfitRecord[]>(KEY.suggestions, []).map((r) => ({
-        ...r,
-        purposes: r.purposes ?? [],
-        relaxed:  r.relaxed  ?? false,
-      }));
+      // 読み出し時にも写真を除去（既存の膨大なデータを段階的に縮小）
+      return load<OutfitRecord[]>(KEY.suggestions, []).map(stripRecordPhotos);
     },
     create(record: OutfitRecord): OutfitRecord {
-      const list = this.getAll();
-      list.unshift(record);
+      // 既存レコードも含めて写真を除去してから保存（一括縮小）
+      const list = this.getAll();          // getAll() 内で写真除去済み
+      list.unshift(stripRecordPhotos(record));
       save(KEY.suggestions, list.slice(0, 100));
-      return record;
+      return record;                       // 呼び出し元には写真あり元データを返す（表示用）
     },
     toggleFeedback(
       id: string,
       outfitIndex: number,
       type: FeedbackType
     ): OutfitRecord | null {
-      const list = this.getAll();
+      const list = this.getAll();          // 写真なしで読み込み済み
       const idx = list.findIndex((r) => r.id === id);
       if (idx === -1) return null;
 

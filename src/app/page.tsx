@@ -1,9 +1,56 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES } from '@/types';
-import { tempMessage, suggestOutfits } from '@/lib/suggest';
+import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
 import OutfitCard from './OutfitCard';
+
+function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
+  if (!diagnostics || diagnostics.totalClothes === 0) {
+    return (
+      <div className="text-center py-16 text-slate-400">
+        <p className="text-lg mb-1">服が登録されていません</p>
+        <p className="text-sm">「服管理」タブから服を追加してください</p>
+      </div>
+    );
+  }
+
+  const reasons: string[] = [];
+  const topsOk    = diagnostics.topsAll > 0;
+  const dressesOk = diagnostics.dressesAll > 0;
+  const hasTop    = topsOk || dressesOk;
+
+  if (!hasTop) {
+    reasons.push('トップスまたはワンピースが1点も登録されていません');
+  }
+  if (diagnostics.bottoms === 0 && !dressesOk) {
+    reasons.push('ボトムスが登録されていません');
+  }
+  if (diagnostics.outersNeeded && diagnostics.outersAvailable === 0) {
+    reasons.push('この気温にはアウターが必要ですが、登録がありません');
+  }
+
+  if (reasons.length === 0) {
+    reasons.push('登録している服の組み合わせで提案できるコーデがありません');
+  }
+
+  return (
+    <div className="py-10 px-4 bg-amber-50 rounded-2xl border border-amber-200">
+      <p className="text-base font-semibold text-amber-800 mb-3">コーデを提案できませんでした</p>
+      <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside mb-4">
+        {reasons.map((r) => <li key={r}>{r}</li>)}
+      </ul>
+      <div className="text-xs text-slate-500 space-y-0.5 bg-white rounded-lg px-4 py-3 border border-slate-100">
+        <p className="font-medium text-slate-600 mb-1">登録状況</p>
+        <p>トップス: {diagnostics.topsAll}点（気温対応: {diagnostics.topsInTemp}点）</p>
+        <p>ワンピース: {diagnostics.dressesAll}点（気温対応: {diagnostics.dressesInTemp}点）</p>
+        <p>ボトムス: {diagnostics.bottoms}点</p>
+        {diagnostics.outersNeeded && <p>アウター: {diagnostics.outersAvailable}点</p>}
+        <p>靴: {diagnostics.shoes}点</p>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [maxTemp, setMaxTemp] = useState('');
@@ -11,6 +58,8 @@ export default function Home() {
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
   const [allPurposes, setAllPurposes] = useState<string[]>(DEFAULT_PURPOSES);
   const [record, setRecord] = useState<OutfitRecord | null>(null);
+  const [fallbackLevel, setFallbackLevel] = useState<0 | 1 | 2>(0);
+  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,6 +94,9 @@ export default function Home() {
         pastRecords,
       });
 
+      setFallbackLevel(result.fallbackLevel);
+      setDiagnostics(result.diagnostics);
+
       const newRecord: OutfitRecord = {
         id:        crypto.randomUUID(),
         date:      new Date().toISOString().slice(0, 10),
@@ -69,7 +121,9 @@ export default function Home() {
   function handleFeedback(outfitIndex: number, type: FeedbackType) {
     if (!record) return;
     const updated = storage.suggestions.toggleFeedback(record.id, outfitIndex, type);
-    if (updated) setRecord({ ...updated });
+    // storage から返るレコードは写真なし。feedbacks だけ更新し、
+    // outfits（写真つき）は in-memory の record を維持して表示を壊さない。
+    if (updated) setRecord({ ...record, feedbacks: updated.feedbacks });
   }
 
   return (
@@ -137,6 +191,16 @@ export default function Home() {
                 ⚠️ 色ルールの条件を少し緩めました
               </span>
             )}
+            {fallbackLevel === 1 && (
+              <span className="inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-full">
+                ℹ️ 気温の厚さ条件を緩めて提案しました
+              </span>
+            )}
+            {fallbackLevel === 2 && (
+              <span className="inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-full">
+                ℹ️ 厚さ・アウター条件を緩めて提案しました
+              </span>
+            )}
             {record.purposes.length > 0 && (
               <div className="flex gap-1 flex-wrap">
                 {record.purposes.map((p) => (
@@ -149,10 +213,7 @@ export default function Home() {
           </div>
 
           {record.outfits.length === 0 ? (
-            <div className="text-center py-16 text-slate-400">
-              <p className="text-lg mb-1">提案できるコーデがありません</p>
-              <p className="text-sm">この気温に合う服を登録してください</p>
-            </div>
+            <NoOutfitMessage diagnostics={diagnostics} />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {record.outfits.map((outfit, i) => (
