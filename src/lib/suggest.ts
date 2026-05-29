@@ -34,7 +34,7 @@ function matchColor(itemColor: string, ruleColor: string): boolean {
 }
 
 function getOutfitItems(outfit: Outfit): ClothingItem[] {
-  return [outfit.dress, outfit.top, outfit.bottom, outfit.outer, outfit.shoes].filter(
+  return [outfit.dress, outfit.top, outfit.bottom, outfit.outer, outfit.shoes, outfit.accessory].filter(
     (x): x is ClothingItem => x !== undefined
   );
 }
@@ -250,7 +250,8 @@ function buildCandidates(
     const sb = (itemScores.get(b.id) ?? 0) + purposeBonus(b, purposes) + jacketBonus(b);
     return sb - sa;
   });
-  const shoes = sortedPool(clothes.filter((c) => c.category === 'shoes'));
+  const shoes       = sortedPool(clothes.filter((c) => c.category === 'shoes'));
+  const accessories = sortedPool(clothes.filter((c) => c.category === 'accessory'));
 
   const hasTopBottom = tops.length > 0 && bottoms.length > 0;
   const hasDress     = dresses.length > 0;
@@ -258,15 +259,21 @@ function buildCandidates(
   const candidates: Outfit[] = [];
 
   if (hasTopBottom || hasDress) {
-    const outerPool: (ClothingItem | undefined)[] = outers.length ? outers.slice(0, 4) : [undefined];
-    const shoesPool: (ClothingItem | undefined)[] = shoes.length ? shoes.slice(0, 4) : [undefined];
+    const outerPool:     (ClothingItem | undefined)[] = outers.length     ? outers.slice(0, 4)     : [undefined];
+    const shoesPool:     (ClothingItem | undefined)[] = shoes.length      ? shoes.slice(0, 4)      : [undefined];
+    // アクセサリーは任意なので undefined（なし）を常に含める
+    const accessoryPool: (ClothingItem | undefined)[] = accessories.length
+      ? [...accessories.slice(0, 3), undefined]
+      : [undefined];
 
     if (hasTopBottom) {
       for (const top of tops.slice(0, 6)) {
         for (const bottom of bottoms.slice(0, 6)) {
           for (const outer of outerPool) {
             for (const shoe of shoesPool) {
-              candidates.push({ top, bottom, outer, shoes: shoe });
+              for (const accessory of accessoryPool) {
+                candidates.push({ top, bottom, outer, shoes: shoe, accessory });
+              }
             }
           }
         }
@@ -276,7 +283,9 @@ function buildCandidates(
       for (const dress of dresses.slice(0, 5)) {
         for (const outer of outerPool) {
           for (const shoe of shoesPool) {
-            candidates.push({ dress, outer, shoes: shoe });
+            for (const accessory of accessoryPool) {
+              candidates.push({ dress, outer, shoes: shoe, accessory });
+            }
           }
         }
       }

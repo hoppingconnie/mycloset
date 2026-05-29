@@ -52,11 +52,12 @@ function stripPhoto(item: ClothingItem | undefined): ClothingItem | undefined {
 }
 function stripOutfitPhotos(outfit: Outfit): Outfit {
   return {
-    top:    stripPhoto(outfit.top),
-    bottom: stripPhoto(outfit.bottom),
-    dress:  stripPhoto(outfit.dress),
-    outer:  stripPhoto(outfit.outer),
-    shoes:  stripPhoto(outfit.shoes),
+    top:       stripPhoto(outfit.top),
+    bottom:    stripPhoto(outfit.bottom),
+    dress:     stripPhoto(outfit.dress),
+    outer:     stripPhoto(outfit.outer),
+    shoes:     stripPhoto(outfit.shoes),
+    accessory: stripPhoto(outfit.accessory),
   };
 }
 function stripRecordPhotos(r: OutfitRecord): OutfitRecord {

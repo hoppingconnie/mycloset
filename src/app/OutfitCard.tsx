@@ -63,6 +63,11 @@ export default function OutfitCard({ outfit, index, feedbacks, onFeedback }: Pro
         )}
         <ItemSlot item={outfit.outer} category="outer" />
         <ItemSlot item={outfit.shoes} category="shoes" />
+        {outfit.accessory && (
+          <div className="col-span-2">
+            <ItemSlot item={outfit.accessory} category="accessory" />
+          </div>
+        )}
       </div>
 
       {/* フィードバック 2×3 */}

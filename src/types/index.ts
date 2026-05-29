@@ -36,6 +36,7 @@ export interface Outfit {
   bottom?: ClothingItem;
   outer?: ClothingItem;
   shoes?: ClothingItem;
+  accessory?: ClothingItem;
 }
 
 export interface FeedbackEntry {
