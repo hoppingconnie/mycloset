@@ -62,6 +62,17 @@ export default function Home() {
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // 案内パネル：初回は開いた状態、一度閉じると次回から閉じたまま
+  const [infoOpen, setInfoOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('wardrobe:infoSeen') !== '1';
+  });
+
+  function toggleInfo() {
+    const next = !infoOpen;
+    setInfoOpen(next);
+    if (!next) localStorage.setItem('wardrobe:infoSeen', '1');
+  }
 
   useEffect(() => {
     const clothes: ClothingItem[] = storage.clothes.getAll();
@@ -128,7 +139,46 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">今日のコーデを探す</h1>
+      <h1 className="text-2xl font-bold text-slate-900 mb-4">今日のコーデを探す</h1>
+
+      {/* 案内パネル */}
+      <div className="bg-rose-50 border border-rose-100 rounded-2xl mb-6 overflow-hidden">
+        <button
+          type="button"
+          onClick={toggleInfo}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+        >
+          <span className="text-sm font-semibold text-rose-700">💡 このアプリについて</span>
+          <span className="text-rose-400 text-xs">{infoOpen ? '▲ 閉じる' : '▼ 開く'}</span>
+        </button>
+        {infoOpen && (
+          <div className="px-5 pb-5 space-y-3 text-sm text-rose-900">
+            <p>
+              このアプリは、AIが提案したコーディネートをそのまま着ることを目的としていません。<br />
+              「こんな組み合わせもあるんだ」「今日はこれをベースに考えてみよう」という
+              <strong>アイディアやヒント</strong>として活用いただくことを想定しています。<br />
+              服選びにかかる時間や迷いを減らしながら、手持ちの服をより楽しく活用できることを目指しています。
+            </p>
+            <div className="bg-white bg-opacity-60 rounded-xl px-4 py-3 space-y-2">
+              <p className="font-semibold text-rose-800">おすすめの使い方</p>
+              <ul className="space-y-1.5 text-rose-800">
+                <li className="flex gap-2">
+                  <span className="shrink-0">•</span>
+                  <span>AIの提案をそのまま着る必要はありません。アイディアやヒントとしてお楽しみください。</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="shrink-0">•</span>
+                  <span>最初はトップス・ボトムス・羽織りなど<strong>30着程度</strong>登録すると提案の幅が広がります。よく着る服から登録し、隙間時間に少しずつ追加するのがおすすめです。</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="shrink-0">•</span>
+                  <span>推奨は <strong>100着以上</strong>です。</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm mb-6 space-y-4">
         {/* 気温 */}
