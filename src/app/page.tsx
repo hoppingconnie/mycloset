@@ -228,6 +228,20 @@ export default function Home() {
         </button>
       </form>
 
+      {/* アンケート */}
+      <p className="text-xs text-slate-400 text-center mt-3 mb-2">
+        さらに役立つアプリにするため、
+        <a
+          href="https://forms.gle/aGWyWiP4eZL5bMTW7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-slate-600"
+        >
+          アンケート
+        </a>
+        へのご協力をお願いします
+      </p>
+
       {error && (
         <div className="bg-red-50 text-red-600 text-sm p-4 rounded-lg mb-6">{error}</div>
       )}
