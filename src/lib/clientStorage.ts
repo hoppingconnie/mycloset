@@ -108,8 +108,23 @@ export const storage = {
 
   suggestions: {
     getAll(): OutfitRecord[] {
-      // 読み出し時にも写真を除去（既存の膨大なデータを段階的に縮小）
-      return load<OutfitRecord[]>(KEY.suggestions, []).map(stripRecordPhotos);
+      const raw      = load<OutfitRecord[]>(KEY.suggestions, []);
+      const stripped = raw.map(stripRecordPhotos);
+      // 写真つきレコードが残っていたら即座に書き戻してストレージを解放する
+      // （縮小後のデータは必ず元より小さいため setItem は成功する）
+      if (typeof window !== 'undefined') {
+        const hasPhotos = raw.some((r) =>
+          (r.outfits ?? []).some((o) =>
+            [o.top, o.bottom, o.dress, o.outer, o.shoes, o.accessory].some(
+              (i) => i?.photoUrl
+            )
+          )
+        );
+        if (hasPhotos) {
+          try { localStorage.setItem(KEY.suggestions, JSON.stringify(stripped)); } catch { /* 無視 */ }
+        }
+      }
+      return stripped;
     },
     create(record: OutfitRecord): OutfitRecord {
       // 既存レコードも含めて写真を除去してから保存（一括縮小）

@@ -104,15 +104,15 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
           const img = new Image();
           img.onerror = () => reject(new Error('画像の処理に失敗しました'));
           img.onload  = () => {
-            // 長辺を最大 800px に縮小（それ以下はそのまま）
-            const MAX = 800;
+            // 長辺を最大 600px に縮小（iPhone 5MB 上限対策・800px から変更）
+            const MAX = 600;
             const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
             const canvas = document.createElement('canvas');
             canvas.width  = Math.round(img.width  * ratio);
             canvas.height = Math.round(img.height * ratio);
             canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-            // JPEG 品質 75% → 典型的な服の写真で 50〜150KB 程度に収まる
-            resolve(canvas.toDataURL('image/jpeg', 0.75));
+            // JPEG 品質 60%（75% から変更）→ 典型的な服の写真で 30〜80KB 程度
+            resolve(canvas.toDataURL('image/jpeg', 0.60));
           };
           img.src = reader.result as string;
         };
@@ -134,8 +134,8 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
     setError('');
     try {
       await onSubmit(form);
-    } catch {
-      setError('保存に失敗しました');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存に失敗しました');
       setLoading(false);
     }
   }
