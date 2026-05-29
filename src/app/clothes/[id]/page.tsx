@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ClothingItem } from '@/types';
 import { storage } from '@/lib/clientStorage';
+import { photoStore } from '@/lib/photoStore';
 import ClothingForm, { ClothingFormData } from '../ClothingForm';
 
 export default function EditClothesPage() {
@@ -13,11 +14,14 @@ export default function EditClothesPage() {
 
   useEffect(() => {
     const found = storage.clothes.getById(id);
-    setItem(found ?? null);
-    if (!found) router.push('/clothes');
+    if (!found) { setItem(null); router.push('/clothes'); return; }
+    // 写真は IndexedDB から非同期で読み込む
+    photoStore.get(id).then((photoUrl) => {
+      setItem({ ...found, photoUrl });
+    });
   }, [id, router]);
 
-  function handleSubmit(form: ClothingFormData) {
+  async function handleSubmit(form: ClothingFormData) {
     storage.clothes.update(id, {
       category:    form.category,
       name:        form.name,
@@ -26,16 +30,21 @@ export default function EditClothesPage() {
       seasons:     form.seasons,
       formality:   form.formality,
       purposeTags: form.purposeTags,
-      photoUrl:    form.photoUrl || undefined,
-      notes:       form.notes   || undefined,
+      notes:       form.notes || undefined,
     });
+    // 写真の更新・削除を IndexedDB に反映
+    if (form.photoUrl?.startsWith('data:')) {
+      await photoStore.set(id, form.photoUrl);
+    } else if (!form.photoUrl) {
+      await photoStore.delete(id);
+    }
     router.push('/clothes');
-    return Promise.resolve();
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirm('削除しますか？')) return;
     storage.clothes.delete(id);
+    await photoStore.delete(id);
     router.push('/clothes');
   }
 

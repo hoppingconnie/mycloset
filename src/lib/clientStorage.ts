@@ -85,7 +85,9 @@ export const storage = {
     },
     create(item: ClothingItem): ClothingItem {
       const list = this.getAll();
-      list.push(item);
+      // 写真は IndexedDB に保存するため localStorage には含めない
+      const { photoUrl: _p, ...itemWithoutPhoto } = item;
+      list.push(itemWithoutPhoto as ClothingItem);
       save(KEY.clothes, list);
       return item;
     },
@@ -93,7 +95,8 @@ export const storage = {
       const list = this.getAll();
       const idx = list.findIndex((c) => c.id === id);
       if (idx === -1) return null;
-      list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
+      const { photoUrl: _p, ...updatesWithoutPhoto } = updates;
+      list[idx] = { ...list[idx], ...updatesWithoutPhoto, updatedAt: new Date().toISOString() };
       save(KEY.clothes, list);
       return list[idx];
     },

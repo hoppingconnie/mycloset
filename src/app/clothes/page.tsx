@@ -6,6 +6,7 @@ import {
   CATEGORY_LABELS, CATEGORY_EMOJI, THICKNESS_LABELS, SEASON_LABELS, FORMALITY_LABELS,
 } from '@/types';
 import { storage } from '@/lib/clientStorage';
+import { photoStore } from '@/lib/photoStore';
 
 const CATS: { value: Category | 'all'; label: string }[] = [
   { value: 'all',       label: 'すべて' },
@@ -20,16 +21,19 @@ const CATS: { value: Category | 'all'; label: string }[] = [
 
 export default function ClothesPage() {
   const [clothes, setClothes] = useState<ClothingItem[]>([]);
+  const [photos, setPhotos]   = useState<Map<string, string>>(new Map());
   const [cat, setCat]         = useState<Category | 'all'>('all');
   const [search, setSearch]   = useState('');
 
   useEffect(() => {
     setClothes(storage.clothes.getAll());
+    photoStore.getAll().then(setPhotos);
   }, []);
 
   function handleDelete(id: string, name: string) {
     if (!confirm(`「${name}」を削除しますか？`)) return;
     storage.clothes.delete(id);
+    photoStore.delete(id);
     setClothes((prev) => prev.filter((c) => c.id !== id));
   }
 
@@ -86,8 +90,8 @@ export default function ClothesPage() {
           {filtered.map((item) => (
             <div key={item.id} className="bg-white rounded-2xl overflow-hidden shadow-sm">
               <div className="aspect-square bg-slate-50 flex items-center justify-center">
-                {item.photoUrl ? (
-                  <img src={item.photoUrl} alt={item.name} className="w-full h-full object-cover" />
+                {(item.photoUrl || photos.get(item.id)) ? (
+                  <img src={item.photoUrl || photos.get(item.id)} alt={item.name} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-5xl">{CATEGORY_EMOJI[item.category]}</span>
                 )}

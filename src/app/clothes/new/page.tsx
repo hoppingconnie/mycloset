@@ -3,15 +3,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ClothingItem } from '@/types';
 import { storage } from '@/lib/clientStorage';
+import { photoStore } from '@/lib/photoStore';
 import ClothingForm, { ClothingFormData } from '../ClothingForm';
 
 export default function NewClothesPage() {
   const router = useRouter();
 
-  function handleSubmit(form: ClothingFormData) {
+  async function handleSubmit(form: ClothingFormData) {
     const now = new Date().toISOString();
+    const id  = crypto.randomUUID();
     const item: ClothingItem = {
-      id:          crypto.randomUUID(),
+      id,
       category:    form.category,
       name:        form.name,
       color:       form.color,
@@ -19,14 +21,13 @@ export default function NewClothesPage() {
       seasons:     form.seasons,
       formality:   form.formality,
       purposeTags: form.purposeTags,
-      photoUrl:    form.photoUrl || undefined,
-      notes:       form.notes   || undefined,
+      notes:       form.notes || undefined,
       createdAt:   now,
       updatedAt:   now,
     };
-    storage.clothes.create(item);
+    storage.clothes.create(item);                          // localStorage（写真なし）
+    if (form.photoUrl) await photoStore.set(id, form.photoUrl); // IndexedDB（写真）
     router.push('/clothes');
-    return Promise.resolve();
   }
 
   return (

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import BottomNav from './NavBar';
+import MigrationRunner from './MigrationRunner';
 
 export const metadata: Metadata = {
   title: 'マイクローゼット',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja">
       <body className="min-h-screen bg-slate-50">
+        <MigrationRunner />
         {/* 上部タイトルバー */}
         <header
           className="sticky top-0 z-50 bg-white border-b border-slate-200"

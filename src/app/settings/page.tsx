@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ClothingItem, ColorRule, OutfitRecord, PURPOSE_TAG_MIGRATION } from '@/types';
 import { storage } from '@/lib/clientStorage';
+import { photoStore } from '@/lib/photoStore';
 
 interface BackupData {
   version: number;
@@ -33,11 +34,17 @@ export default function SettingsPage() {
   useEffect(() => { refreshStats(); }, []);
 
   // ── エクスポート ────────────────────────────────────────────────────────────
-  function handleExport() {
+  async function handleExport() {
+    // 写真を IndexedDB から読み込み、clothes に付与してからエクスポートする
+    const photoMap = await photoStore.getAll();
+    const clothesWithPhotos = storage.clothes.getAll().map((item) => {
+      const photoUrl = photoMap.get(item.id);
+      return photoUrl ? { ...item, photoUrl } : item;
+    });
     const backup: BackupData = {
       version:    1,
       exportedAt: new Date().toISOString(),
-      clothes:    storage.clothes.getAll(),
+      clothes:    clothesWithPhotos,
       colorRules: storage.colorRules.getAll(),
       suggestions: storage.suggestions.getAll(),
     };
@@ -78,6 +85,8 @@ export default function SettingsPage() {
 
         for (const item of (data.clothes ?? []) as ClothingItem[]) {
           if (!existClothes.has(item.id)) {
+            // 写真は IndexedDB に保存し、localStorage には写真なしで保存する
+            if (item.photoUrl) await photoStore.set(item.id, item.photoUrl);
             storage.clothes.create(migrateItem(item));
             addedClothes++;
           }
@@ -95,6 +104,7 @@ export default function SettingsPage() {
         for (const item of data as ClothingItem[]) {
           if (item.id && item.name && item.category) {
             if (!existClothes.has(item.id)) {
+              if (item.photoUrl) await photoStore.set(item.id, item.photoUrl);
               storage.clothes.create(migrateItem(item));
               addedClothes++;
             }
@@ -117,11 +127,12 @@ export default function SettingsPage() {
   }
 
   // ── 全削除 ─────────────────────────────────────────────────────────────────
-  function handleClear() {
+  async function handleClear() {
     if (!confirm('すべてのデータ（服・色ルール・提案履歴）を削除しますか？\nこの操作は元に戻せません。')) return;
     localStorage.removeItem('wardrobe:clothes');
     localStorage.removeItem('wardrobe:colorRules');
     localStorage.removeItem('wardrobe:suggestions');
+    await photoStore.clearAll();
     refreshStats();
     setImportMsg({ ok: true, text: 'データをすべて削除しました' });
   }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES } from '@/types';
 import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
+import { photoStore } from '@/lib/photoStore';
 import OutfitCard from './OutfitCard';
 
 function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
@@ -87,7 +88,7 @@ export default function Home() {
     );
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -108,13 +109,30 @@ export default function Home() {
       setFallbackLevel(result.fallbackLevel);
       setDiagnostics(result.diagnostics);
 
+      // 写真を IndexedDB から読み込み、outfit に付与してから表示・保存する
+      const photoMap = await photoStore.getAll();
+      const addPhoto = (item: ClothingItem | undefined): ClothingItem | undefined => {
+        if (!item) return undefined;
+        const photoUrl = photoMap.get(item.id);
+        return photoUrl ? { ...item, photoUrl } : item;
+      };
+      const outfitsWithPhotos = result.outfits.map((outfit) => ({
+        ...outfit,
+        top:       addPhoto(outfit.top),
+        bottom:    addPhoto(outfit.bottom),
+        dress:     addPhoto(outfit.dress),
+        outer:     addPhoto(outfit.outer),
+        shoes:     addPhoto(outfit.shoes),
+        accessory: addPhoto(outfit.accessory),
+      }));
+
       const newRecord: OutfitRecord = {
         id:        crypto.randomUUID(),
         date:      new Date().toISOString().slice(0, 10),
         maxTemp:   Number(maxTemp),
         minTemp:   Number(minTemp),
         purposes:  selectedPurposes,
-        outfits:   result.outfits,
+        outfits:   outfitsWithPhotos,
         feedbacks: [],
         relaxed:   result.relaxed,
         createdAt: new Date().toISOString(),
