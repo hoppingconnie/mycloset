@@ -152,12 +152,12 @@ export default function Home() {
           <span className="text-rose-400 text-xs">{infoOpen ? '▲ 閉じる' : '▼ 開く'}</span>
         </button>
         {infoOpen && (
-          <div className="px-5 pb-5 space-y-3 text-sm text-rose-900">
-            <p>
-              このアプリは、AIが提案したコーディネートをそのまま着ることを目的としていません。<br />
+          <div className="px-5 pb-5 space-y-3 text-xs text-rose-900">
+            <p className="leading-relaxed">
+              このアプリは、AIが提案したコーディネートを参考に、楽しく時間をかけずに服選びをすることを目的としています。<br />
               「こんな組み合わせもあるんだ」「今日はこれをベースに考えてみよう」という
               <strong>アイディアやヒント</strong>として活用いただくことを想定しています。<br />
-              服選びにかかる時間や迷いを減らしながら、手持ちの服をより楽しく活用できることを目指しています。
+              また、AIの提案を参考にすることで、コーディネートのバリエーションとヘビロテ服を増やすことで、手持ちの服をより活用することを目指しています。
             </p>
             <div className="bg-white bg-opacity-60 rounded-xl px-4 py-3 space-y-2">
               <p className="font-semibold text-rose-800">おすすめの使い方</p>
@@ -168,11 +168,15 @@ export default function Home() {
                 </li>
                 <li className="flex gap-2">
                   <span className="shrink-0">•</span>
-                  <span>最初はトップス・ボトムス・羽織りなど<strong>30着程度</strong>登録すると提案の幅が広がります。よく着る服から登録し、隙間時間に少しずつ追加するのがおすすめです。</span>
+                  <span>最初はトップス・ボトムス・羽織りなど<strong>30着程度</strong>登録すると提案の幅が広がります。まずはよく着る服から登録し、隙間時間に少しずつ追加するのがおすすめです。</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="shrink-0">•</span>
-                  <span>推奨は <strong>100着以上</strong>です。</span>
+                  <span><strong>100着以上</strong>登録すると提案の幅がぐっと広がります。</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="shrink-0">•</span>
+                  <span>「こんな服持っていたんだ」「意外とこの組み合わせもありかも」と、新しい発見があるかもしれません。</span>
                 </li>
               </ul>
             </div>
