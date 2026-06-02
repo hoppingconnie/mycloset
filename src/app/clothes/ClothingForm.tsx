@@ -33,6 +33,110 @@ const defaults: ClothingFormData = {
   notes: '',
 };
 
+// ── 色定数 ──────────────────────────────────────────────────────────────────────
+
+const STANDARD_COLORS = [
+  '白', '黒', 'グレー', 'ネイビー', 'ブルー', 'ベージュ', 'ブラウン',
+  'カーキ', 'グリーン', 'ピンク', 'レッド', 'オレンジ', 'イエロー',
+  'パープル', 'シルバー', 'ゴールド',
+] as const;
+
+type StandardColor = (typeof STANDARD_COLORS)[number];
+
+const COLOR_SWATCHES: Record<string, string> = {
+  '白':      '#f1f5f9',
+  '黒':      '#1e293b',
+  'グレー':   '#94a3b8',
+  'ネイビー': '#1e3a5f',
+  'ブルー':   '#3b82f6',
+  'ベージュ': '#d4b896',
+  'ブラウン': '#7c5230',
+  'カーキ':   '#7c7256',
+  'グリーン': '#22c55e',
+  'ピンク':   '#f472b6',
+  'レッド':   '#ef4444',
+  'オレンジ': '#f97316',
+  'イエロー': '#eab308',
+  'パープル': '#a855f7',
+  'シルバー': '#cbd5e1',
+  'ゴールド': '#d4a017',
+};
+
+/** よく使われる別名 → 標準カラー名 */
+const COLOR_ALIASES: Record<string, string> = {
+  'ホワイト': '白', 'しろ': '白',
+  'ブラック': '黒', 'くろ': '黒',
+  'チャコール': 'グレー', 'ライトグレー': 'グレー', 'ダークグレー': 'グレー',
+  'スレート': 'グレー', 'グレージュ': 'グレー',
+  'インディゴ': 'ネイビー', 'ダークブルー': 'ネイビー', 'デニムブルー': 'ネイビー',
+  '紺': 'ネイビー', 'マリンブルー': 'ネイビー',
+  '水色': 'ブルー', 'スカイブルー': 'ブルー', 'ライトブルー': 'ブルー',
+  '青': 'ブルー', 'セルリアン': 'ブルー',
+  'アイボリー': 'ベージュ', 'クリーム': 'ベージュ', '生成り': 'ベージュ',
+  'エクリュ': 'ベージュ', 'オフホワイト': 'ベージュ', 'タン': 'ベージュ',
+  'サンド': 'ベージュ',
+  'マロン': 'ブラウン', 'チョコレート': 'ブラウン', 'テラコッタ': 'ブラウン',
+  'キャメル': 'ブラウン', 'コニャック': 'ブラウン',
+  'オリーブ': 'カーキ', 'カーキグリーン': 'カーキ', 'オリーブグリーン': 'カーキ',
+  'ミリタリー': 'カーキ',
+  '緑': 'グリーン', 'ミント': 'グリーン', 'セージ': 'グリーン',
+  'エメラルド': 'グリーン', 'フォレスト': 'グリーン',
+  'サーモン': 'ピンク', 'コーラル': 'ピンク', 'ローズ': 'ピンク',
+  'ベビーピンク': 'ピンク', 'フューシャ': 'ピンク',
+  'ボルドー': 'レッド', 'バーガンディ': 'レッド', 'ワインレッド': 'レッド',
+  '赤': 'レッド', 'ワイン': 'レッド',
+  'マスタード': 'イエロー', '黄': 'イエロー', 'レモン': 'イエロー',
+  'ラベンダー': 'パープル', 'バイオレット': 'パープル', '紫': 'パープル',
+  'ライラック': 'パープル', 'プラム': 'パープル',
+};
+
+function resolveColor(text: string): string {
+  const t = text.trim();
+  if (!t) return '';
+  if (STANDARD_COLORS.includes(t as StandardColor)) return t;
+  if (COLOR_ALIASES[t]) return COLOR_ALIASES[t];
+  // 部分一致（例: "ネイビーブルー" → "ネイビー"）
+  for (const c of STANDARD_COLORS) {
+    if (t.includes(c)) return c;
+  }
+  return 'その他';
+}
+
+function parseColorStr(colorStr: string): {
+  main: string;
+  sub: string;
+  mainNote: string;
+  subNote: string;
+} {
+  if (!colorStr) return { main: '', sub: '', mainNote: '', subNote: '' };
+  // ・/ × ＋ 、, (全角スペース含む) で分割
+  const parts = colorStr.split(/[・\/×＋、,　]+/).map((s) => s.trim()).filter(Boolean);
+  const mainRaw = parts[0] ?? '';
+  const subRaw  = parts[1] ?? '';
+  const main = resolveColor(mainRaw);
+  const sub  = subRaw ? resolveColor(subRaw) : '';
+  return {
+    main,
+    sub,
+    mainNote: main === 'その他' ? mainRaw : '',
+    subNote:  sub  === 'その他' ? subRaw  : '',
+  };
+}
+
+function serializeColor(
+  main: string,
+  sub: string,
+  mainNote: string,
+  subNote: string,
+): string {
+  const mainStr = main === 'その他' ? (mainNote.trim() || 'その他') : main;
+  if (!sub) return mainStr;
+  const subStr  = sub  === 'その他' ? (subNote.trim()  || 'その他') : sub;
+  return `${mainStr}・${subStr}`;
+}
+
+// ── スタイル定数 ─────────────────────────────────────────────────────────────────
+
 const SEASONS: { value: Season; label: string }[] = [
   { value: 'spring', label: '春' },
   { value: 'summer', label: '夏' },
@@ -53,6 +157,41 @@ function chipCls(active: boolean) {
   ].join(' ');
 }
 
+/** 色ドット＋ラベルのチップボタン */
+function ColorChip({
+  color,
+  selected,
+  onClick,
+}: {
+  color: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const swatch = COLOR_SWATCHES[color];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors',
+        selected
+          ? 'bg-rose-500 text-white border-rose-500'
+          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+      ].join(' ')}
+    >
+      {swatch && (
+        <span
+          className="w-3 h-3 rounded-full border border-black/10 shrink-0"
+          style={{ backgroundColor: swatch }}
+        />
+      )}
+      {color}
+    </button>
+  );
+}
+
+// ── フォーム本体 ─────────────────────────────────────────────────────────────────
+
 export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete }: Props) {
   const [form, setForm] = useState<ClothingFormData>({ ...defaults, ...initial });
   const [loading, setLoading] = useState(false);
@@ -63,6 +202,13 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [customTag, setCustomTag] = useState('');
+
+  // 色の選択状態（form.color とは独立して管理し、送信時に合成する）
+  const initColor = parseColorStr(initial?.color ?? '');
+  const [mainColor, setMainColor] = useState(initColor.main);
+  const [subColor,  setSubColor]  = useState(initColor.sub);
+  const [mainNote,  setMainNote]  = useState(initColor.mainNote);
+  const [subNote,   setSubNote]   = useState(initColor.subNote);
 
   function set<K extends keyof ClothingFormData>(k: K, v: ClothingFormData[K]) {
     setForm((p) => ({ ...p, [k]: v }));
@@ -95,8 +241,6 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
     setUploading(true);
     setUploadError('');
     try {
-      // FileReader で読み込んだあと Canvas でリサイズ・圧縮する
-      // iPhone Safari の localStorage 上限（約5MB）対策
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = () => reject(new Error('読み込みに失敗しました'));
@@ -104,14 +248,12 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
           const img = new Image();
           img.onerror = () => reject(new Error('画像の処理に失敗しました'));
           img.onload  = () => {
-            // 長辺を最大 600px に縮小（iPhone 5MB 上限対策・800px から変更）
             const MAX = 600;
             const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
             const canvas = document.createElement('canvas');
             canvas.width  = Math.round(img.width  * ratio);
             canvas.height = Math.round(img.height * ratio);
             canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-            // JPEG 品質 60%（75% から変更）→ 典型的な服の写真で 30〜80KB 程度
             resolve(canvas.toDataURL('image/jpeg', 0.60));
           };
           img.src = reader.result as string;
@@ -130,10 +272,22 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (form.seasons.length === 0) { setError('季節を1つ以上選択してください'); return; }
+    if (!mainColor) { setError('メインカラーを選択してください'); return; }
+    if (mainColor === 'その他' && !mainNote.trim()) {
+      setError('「その他」の場合は色名を入力してください');
+      return;
+    }
+    if (subColor === 'その他' && !subNote.trim()) {
+      setError('サブカラー「その他」の場合は色名を入力してください');
+      return;
+    }
+
+    const color = serializeColor(mainColor, subColor, mainNote, subNote);
+
     setLoading(true);
     setError('');
     try {
-      await onSubmit(form);
+      await onSubmit({ ...form, color });
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存に失敗しました');
       setLoading(false);
@@ -166,11 +320,79 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
         <input type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="例: 白Tシャツ" required className={inp} />
       </div>
 
-      {/* 色 */}
+      {/* メインカラー */}
       <div>
-        <label className={lbl}>色 *</label>
-        <input type="text" value={form.color} onChange={(e) => set('color', e.target.value)} placeholder="例: 白、ネイビー" required className={inp} />
+        <label className={lbl}>メインカラー *</label>
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {STANDARD_COLORS.map((c) => (
+            <ColorChip
+              key={c}
+              color={c}
+              selected={mainColor === c}
+              onClick={() => { setMainColor(c); setMainNote(''); }}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => setMainColor('その他')}
+            className={chipCls(mainColor === 'その他')}
+          >
+            その他
+          </button>
+        </div>
+        {mainColor === 'その他' && (
+          <input
+            type="text"
+            value={mainNote}
+            onChange={(e) => setMainNote(e.target.value)}
+            placeholder="色を入力（例: 水色、テラコッタ）"
+            className={`mt-2 ${inp}`}
+          />
+        )}
       </div>
+
+      {/* サブカラー（任意） */}
+      {mainColor && (
+        <div>
+          <label className={lbl}>
+            サブカラー
+            <span className="font-normal text-slate-400 ml-1">（任意）</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            <button
+              type="button"
+              onClick={() => { setSubColor(''); setSubNote(''); }}
+              className={chipCls(!subColor)}
+            >
+              なし
+            </button>
+            {STANDARD_COLORS.map((c) => (
+              <ColorChip
+                key={c}
+                color={c}
+                selected={subColor === c}
+                onClick={() => { setSubColor(c); setSubNote(''); }}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setSubColor('その他')}
+              className={chipCls(subColor === 'その他')}
+            >
+              その他
+            </button>
+          </div>
+          {subColor === 'その他' && (
+            <input
+              type="text"
+              value={subNote}
+              onChange={(e) => setSubNote(e.target.value)}
+              placeholder="色を入力（例: テラコッタ）"
+              className={`mt-2 ${inp}`}
+            />
+          )}
+        </div>
+      )}
 
       {/* 厚さ */}
       <div>
