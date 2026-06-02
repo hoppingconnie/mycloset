@@ -63,6 +63,10 @@ export default function Home() {
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // 天気取得
+  const [weatherDay, setWeatherDay]   = useState<0 | 1 | null>(null); // null=非取得中
+  const [weatherMsg, setWeatherMsg]   = useState('');
+  const [weatherErr, setWeatherErr]   = useState('');
   // 案内パネル：初回は開いた状態、一度閉じると次回から閉じたまま
   const [infoOpen, setInfoOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -86,6 +90,60 @@ export default function Home() {
     setSelectedPurposes((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
     );
+  }
+
+  // ── 天気取得 ─────────────────────────────────────────────────────────────────
+  // Open-Meteo は無料・キーなし。位置情報はリクエスト後に保持しない。
+  async function fetchWeather(dayOffset: 0 | 1) {
+    setWeatherDay(dayOffset);
+    setWeatherMsg('');
+    setWeatherErr('');
+    try {
+      // 1. ブラウザの位置情報取得（ボタン押下時のみ求める）
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('このブラウザは位置情報に対応していません'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(resolve, (err) => {
+          reject(
+            err.code === err.PERMISSION_DENIED
+              ? new Error('位置情報の利用が拒否されました。ブラウザの設定をご確認ください。')
+              : new Error('位置情報を取得できませんでした')
+          );
+        }, { timeout: 10000 });
+      });
+
+      // 2. Open-Meteo で今日・明日の最高/最低気温を取得
+      const { latitude, longitude } = position.coords;
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast` +
+        `?latitude=${latitude.toFixed(4)}&longitude=${longitude.toFixed(4)}` +
+        `&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2`
+      );
+      if (!res.ok) throw new Error('天気データの取得に失敗しました');
+
+      const data = await res.json() as {
+        daily: { temperature_2m_max: number[]; temperature_2m_min: number[] };
+      };
+      const max = Math.round(data.daily.temperature_2m_max[dayOffset]);
+      const min = Math.round(data.daily.temperature_2m_min[dayOffset]);
+
+      // 3. 気温欄に自動入力（ユーザーは後から修正可能）
+      setMaxTemp(String(max));
+      setMinTemp(String(min));
+      setWeatherMsg(
+        `現在地の${dayOffset === 0 ? '今日' : '明日'}の気温を入力しました（最高 ${max}°C・最低 ${min}°C）`
+      );
+    } catch (err) {
+      setWeatherErr(
+        err instanceof Error
+          ? err.message
+          : '気温の取得に失敗しました。手動で入力してください。'
+      );
+    } finally {
+      setWeatherDay(null);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -204,19 +262,40 @@ export default function Home() {
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm mb-6 space-y-4">
         {/* 気温 */}
-        <div className="flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">最高気温 (°C)</label>
-            <input type="number" value={maxTemp} onChange={(e) => setMaxTemp(e.target.value)}
-              placeholder="例: 25" required
-              className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">最高気温 (°C)</label>
+              <input type="number" value={maxTemp}
+                onChange={(e) => { setMaxTemp(e.target.value); setWeatherMsg(''); }}
+                placeholder="例: 25" required
+                className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">最低気温 (°C)</label>
+              <input type="number" value={minTemp}
+                onChange={(e) => { setMinTemp(e.target.value); setWeatherMsg(''); }}
+                placeholder="例: 15" required
+                className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">最低気温 (°C)</label>
-            <input type="number" value={minTemp} onChange={(e) => setMinTemp(e.target.value)}
-              placeholder="例: 15" required
-              className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+          {/* 天気取得ボタン */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-slate-400">天気から自動入力:</span>
+            {([0, 1] as const).map((day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => fetchWeather(day)}
+                disabled={weatherDay !== null}
+                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-sky-200 text-sky-600 hover:bg-sky-50 disabled:opacity-40 transition-colors"
+              >
+                {weatherDay === day ? '取得中…' : day === 0 ? '🌤 今日' : '📅 明日'}
+              </button>
+            ))}
           </div>
+          {weatherErr && <p className="text-xs text-red-500">{weatherErr}</p>}
+          {weatherMsg && <p className="text-xs text-emerald-600">✓ {weatherMsg}</p>}
         </div>
 
         {/* 用途タグ */}
