@@ -3,10 +3,10 @@ import { useEffect, useState } from 'react';
 import { ColorRule, ColorRuleType, COLOR_RULE_LABELS } from '@/types';
 import { storage } from '@/lib/clientStorage';
 
-const TYPE_OPTIONS: { value: ColorRuleType; label: string; icon: string; example: string }[] = [
-  { value: 'avoid_pair',    label: '避けたい組み合わせ', icon: '🚫', example: '例: 黒 × 紺' },
-  { value: 'like_pair',     label: '好きな組み合わせ',   icon: '♡',  example: '例: 白 × ベージュ' },
-  { value: 'avoid_overall', label: '避けたい全体印象',   icon: '⚠️', example: '例: 全身黒 → 「黒」だけ登録' },
+const TYPE_OPTIONS: { value: ColorRuleType; label: string; example: string }[] = [
+  { value: 'avoid_pair',    label: '避けたい組み合わせ', example: '例: 黒 × 紺' },
+  { value: 'like_pair',     label: '好きな組み合わせ',   example: '例: 白 × ベージュ' },
+  { value: 'avoid_overall', label: '避けたい全体印象',   example: '例: 全身黒 → 「黒」だけ登録' },
 ];
 
 const RULE_CONNECTOR: Record<ColorRuleType, string> = {
@@ -84,25 +84,25 @@ export default function ColorRulesPage() {
   }
 
   const rulesByType = (type: ColorRuleType) => rules.filter((r) => r.type === type);
-  const inp = 'border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500';
+  const inp = 'border border-border-mid rounded-lg px-3 py-2 text-sm bg-ivory focus:outline-none focus:ring-2 focus:ring-navy/40';
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">色の相性ルール</h1>
+      <h1 className="text-xl font-medium text-ink tracking-wide mb-6">色の相性ルール</h1>
 
-      <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
-        <h2 className="text-base font-semibold text-slate-800 mb-4">ルールを追加</h2>
+      <div className="bg-cream rounded-2xl p-6 border border-border-w shadow-[0_2px_12px_rgba(36,51,82,0.07)] mb-8">
+        <h2 className="text-base font-medium text-ink mb-4">ルールを追加</h2>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          {TYPE_OPTIONS.map(({ value, label, icon }) => (
+          {TYPE_OPTIONS.map(({ value, label }) => (
             <button key={value} type="button" onClick={() => handleTypeChange(value)}
               className={[
                 'px-3 py-1.5 rounded-full text-sm border transition-colors font-medium',
                 ruleType === value
-                  ? 'bg-rose-500 text-white border-rose-500'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+                  ? 'bg-navy text-white border-navy'
+                  : 'border-border-w text-secondary hover:bg-ivory-dark',
               ].join(' ')}>
-              {icon} {label}
+              {label}
             </button>
           ))}
         </div>
@@ -114,7 +114,7 @@ export default function ColorRulesPage() {
             <div className="flex items-center gap-2">
               <input value={pairColors[0]} onChange={(e) => setPairColors([e.target.value, pairColors[1]])}
                 placeholder="色1 (例: 黒)" className={`${inp} flex-1`} />
-              <span className="text-slate-400 font-bold">{RULE_CONNECTOR[ruleType]}</span>
+              <span className="text-muted font-bold">{RULE_CONNECTOR[ruleType]}</span>
               <input value={pairColors[1]} onChange={(e) => setPairColors([pairColors[0], e.target.value])}
                 placeholder="色2 (例: 紺)" className={`${inp} flex-1`} />
             </div>
@@ -125,22 +125,22 @@ export default function ColorRulesPage() {
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOverallColor(); } }}
                   placeholder="色を追加 (例: 黒)" className={`${inp} flex-1`} />
                 <button type="button" onClick={addOverallColor}
-                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+                  className="px-3 py-2 border border-border-mid rounded-lg text-sm text-secondary hover:bg-ivory-dark">
                   追加
                 </button>
               </div>
               {overallColors.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {overallColors.map((c) => (
-                    <span key={c} className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs border border-slate-200">
+                    <span key={c} className="inline-flex items-center gap-1 px-2.5 py-1 bg-ivory-dark text-secondary rounded-full text-xs border border-border-w">
                       {c}
                       <button type="button" onClick={() => setOverallColors((p) => p.filter((x) => x !== c))}
-                        className="text-slate-400 hover:text-red-500">×</button>
+                        className="text-muted hover:text-red-500">×</button>
                     </span>
                   ))}
                 </div>
               )}
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-muted mt-1">
                 {TYPE_OPTIONS.find((o) => o.value === ruleType)?.example}
               </p>
             </div>
@@ -150,40 +150,40 @@ export default function ColorRulesPage() {
             placeholder="メモ (任意)" className={`${inp} w-full`} />
 
           <button type="submit" disabled={submitting}
-            className="bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
+            className="bg-navy hover:bg-navy-dim disabled:opacity-40 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors">
             {submitting ? '保存中...' : '追加する'}
           </button>
         </form>
       </div>
 
       {rules.length === 0 ? (
-        <p className="text-center text-slate-400 py-8 text-sm">ルールはまだ登録されていません</p>
+        <p className="text-center text-muted py-8 text-sm">ルールはまだ登録されていません</p>
       ) : (
         <div className="space-y-6">
-          {TYPE_OPTIONS.map(({ value, label, icon }) => {
+          {TYPE_OPTIONS.map(({ value, label }) => {
             const group = rulesByType(value);
             if (group.length === 0) return null;
             return (
               <div key={value}>
-                <h3 className="text-sm font-semibold text-slate-500 mb-2">{icon} {label} ({group.length}件)</h3>
+                <h3 className="text-sm font-medium text-secondary mb-2">{label} ({group.length}件)</h3>
                 <div className="space-y-2">
                   {group.map((rule) => (
-                    <div key={rule.id} className="bg-white rounded-xl px-4 py-3 shadow-sm flex items-center justify-between gap-4">
+                    <div key={rule.id} className="bg-cream rounded-xl px-4 py-3 border border-border-w flex items-center justify-between gap-4">
                       <div className="flex items-center gap-2 flex-wrap">
                         {rule.type !== 'avoid_overall' ? (
                           <>
-                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-sm font-medium">{rule.colors[0]}</span>
-                            <span className="text-slate-400 font-bold text-sm">{RULE_CONNECTOR[rule.type]}</span>
-                            <span className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-sm font-medium">{rule.colors[1]}</span>
+                            <span className="bg-ivory-dark text-ink px-2.5 py-1 rounded-full text-sm font-medium">{rule.colors[0]}</span>
+                            <span className="text-muted font-bold text-sm">{RULE_CONNECTOR[rule.type]}</span>
+                            <span className="bg-ivory-dark text-ink px-2.5 py-1 rounded-full text-sm font-medium">{rule.colors[1]}</span>
                           </>
                         ) : (
                           <div className="flex flex-wrap gap-1">
                             {rule.colors.map((c, i) => (
-                              <span key={i} className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full text-sm font-medium">{c}</span>
+                              <span key={i} className="bg-ivory-dark text-ink px-2.5 py-1 rounded-full text-sm font-medium">{c}</span>
                             ))}
                           </div>
                         )}
-                        {rule.note && <span className="text-xs text-slate-400 ml-1">{rule.note}</span>}
+                        {rule.note && <span className="text-xs text-muted ml-1">{rule.note}</span>}
                       </div>
                       <button onClick={() => handleDelete(rule.id)}
                         className="flex-shrink-0 text-xs text-red-400 hover:text-red-600 border border-red-200 hover:bg-red-50 px-2.5 py-1 rounded-lg transition-colors">

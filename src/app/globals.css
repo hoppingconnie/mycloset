@@ -1,13 +1,35 @@
 @import "tailwindcss";
 
+/* ── カスタムカラーパレット ── */
+@theme {
+  /* backgrounds */
+  --color-ivory:      #FAF8F4;
+  --color-ivory-dark: #F0EBE2;
+  --color-cream:      #FDFCFA;
+  /* borders */
+  --color-border-w:   #E5DFD7;
+  --color-border-mid: #CEC7BC;
+  /* greige */
+  --color-greige:     #AFA89E;
+  /* navy */
+  --color-navy-soft:  #ECF0F6;
+  --color-navy:       #243352;
+  --color-navy-dim:   #2E4066;
+  /* text */
+  --color-ink:        #2C2924;
+  --color-secondary:  #7A736B;
+  --color-muted:      #B0A9A1;
+}
+
+/* ── ベーススタイル ── */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #FAF8F4;
+  --foreground: #2C2924;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
-    'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont,
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
 }

@@ -137,26 +137,26 @@ export default function SettingsPage() {
     setImportMsg({ ok: true, text: 'データをすべて削除しました' });
   }
 
-  const card  = 'bg-white rounded-2xl p-5 shadow-sm space-y-3';
-  const btn   = (color: string) =>
+  const card = 'bg-cream rounded-2xl p-5 border border-border-w shadow-[0_2px_12px_rgba(36,51,82,0.07)] space-y-3';
+  const btn  = (color: string) =>
     `w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${color}`;
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-slate-900">データ管理</h1>
+      <h1 className="text-xl font-medium text-ink tracking-wide">データ管理</h1>
 
       {/* 現在の件数 */}
       <div className={card}>
-        <h2 className="text-sm font-semibold text-slate-600">このデバイスの保存データ</h2>
+        <h2 className="text-sm font-medium text-secondary">このデバイスの保存データ</h2>
         <div className="grid grid-cols-3 gap-2 text-center">
           {[
             { label: '服', value: stats.clothes },
             { label: '色ルール', value: stats.colorRules },
             { label: '提案履歴', value: stats.suggestions },
           ].map(({ label, value }) => (
-            <div key={label} className="bg-slate-50 rounded-xl py-3">
-              <p className="text-2xl font-bold text-slate-800">{value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+            <div key={label} className="bg-navy-soft rounded-xl py-3">
+              <p className="text-2xl font-medium text-navy">{value}</p>
+              <p className="text-xs text-secondary mt-0.5">{label}</p>
             </div>
           ))}
         </div>
@@ -164,31 +164,31 @@ export default function SettingsPage() {
 
       {/* エクスポート */}
       <div className={card}>
-        <h2 className="text-base font-semibold text-slate-800">バックアップ（エクスポート）</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-base font-medium text-ink">バックアップ（エクスポート）</h2>
+        <p className="text-xs text-muted">
           服・色ルール・提案履歴をJSONファイルに保存します。
           別のデバイスへの引っ越しやバックアップに使えます。
         </p>
         <button onClick={handleExport}
-          className={btn('bg-rose-500 hover:bg-rose-600 text-white')}>
+          className={btn('bg-navy hover:bg-navy-dim text-white')}>
           JSONをダウンロード
         </button>
       </div>
 
       {/* インポート */}
       <div className={card}>
-        <h2 className="text-base font-semibold text-slate-800">データの復元（インポート）</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-base font-medium text-ink">データの復元（インポート）</h2>
+        <p className="text-xs text-muted">
           以下のファイルを読み込めます：
         </p>
-        <ul className="text-xs text-slate-500 list-disc list-inside space-y-0.5">
+        <ul className="text-xs text-muted list-disc list-inside space-y-0.5">
           <li>このアプリのバックアップJSON（エクスポートしたファイル）</li>
-          <li>旧サーバーの <code className="bg-slate-100 px-1 rounded">data/clothes.json</code>
-            <span className="ml-1 text-slate-400">（以前の服データ）</span>
+          <li>旧サーバーの <code className="bg-ivory-dark px-1 rounded">data/clothes.json</code>
+            <span className="ml-1 text-muted">（以前の服データ）</span>
           </li>
         </ul>
-        <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-          ⚠️ すでに同じIDのデータがある場合はスキップされます（重複しません）
+        <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+          すでに同じIDのデータがある場合はスキップされます（重複しません）
         </p>
 
         {importMsg && (
@@ -202,7 +202,7 @@ export default function SettingsPage() {
         )}
 
         <button onClick={() => fileRef.current?.click()}
-          className={btn('bg-slate-800 hover:bg-slate-700 text-white')}>
+          className={btn('bg-navy hover:bg-navy-dim text-white')}>
           JSONファイルを選択
         </button>
         <input ref={fileRef} type="file" accept=".json" className="hidden"
@@ -211,8 +211,8 @@ export default function SettingsPage() {
 
       {/* 全削除 */}
       <div className={card}>
-        <h2 className="text-base font-semibold text-slate-800">データをすべて削除</h2>
-        <p className="text-xs text-slate-500">
+        <h2 className="text-base font-medium text-ink">データをすべて削除</h2>
+        <p className="text-xs text-muted">
           このデバイスに保存されているすべてのデータを消去します。
           削除前にエクスポートしておくことをおすすめします。
         </p>

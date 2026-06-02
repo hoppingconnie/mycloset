@@ -145,15 +145,15 @@ const SEASONS: { value: Season; label: string }[] = [
 ];
 
 const inp =
-  'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500';
-const lbl = 'block text-sm font-medium text-slate-700 mb-1';
+  'w-full border border-border-mid rounded-lg px-3 py-2 text-sm bg-ivory focus:outline-none focus:ring-2 focus:ring-navy/40';
+const lbl = 'block text-sm font-medium text-secondary mb-1';
 
 function chipCls(active: boolean) {
   return [
     'px-3 py-1.5 rounded-full text-sm font-medium border transition-colors',
     active
-      ? 'bg-rose-500 text-white border-rose-500'
-      : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50',
+      ? 'bg-navy text-white border-navy'
+      : 'bg-ivory text-secondary border-border-w hover:bg-ivory-dark',
   ].join(' ');
 }
 
@@ -175,8 +175,8 @@ function ColorChip({
       className={[
         'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition-colors',
         selected
-          ? 'bg-rose-500 text-white border-rose-500'
-          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
+          ? 'bg-navy text-white border-navy'
+          : 'bg-ivory text-ink border-border-w hover:bg-ivory-dark',
       ].join(' ')}
     >
       {swatch && (
@@ -356,7 +356,7 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
         <div>
           <label className={lbl}>
             サブカラー
-            <span className="font-normal text-slate-400 ml-1">（任意）</span>
+            <span className="font-normal text-muted ml-1">（任意）</span>
           </label>
           <div className="flex flex-wrap gap-1.5 mt-1">
             <button
@@ -429,9 +429,9 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
         {customTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {customTags.map((tag) => (
-              <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-slate-100 text-slate-700 border border-slate-200">
+              <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-ivory-dark text-secondary border border-border-w">
                 {tag}
-                <button type="button" onClick={() => togglePurpose(tag)} className="text-slate-400 hover:text-red-500 leading-none">×</button>
+                <button type="button" onClick={() => togglePurpose(tag)} className="text-muted hover:text-red-500 leading-none">×</button>
               </span>
             ))}
           </div>
@@ -443,9 +443,9 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
             onChange={(e) => setCustomTag(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
             placeholder="カスタムタグを追加..."
-            className="flex-1 border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+            className="flex-1 border border-border-mid rounded-lg px-3 py-1.5 text-sm bg-ivory focus:outline-none focus:ring-2 focus:ring-navy/40"
           />
-          <button type="button" onClick={addCustomTag} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+          <button type="button" onClick={addCustomTag} className="px-3 py-1.5 border border-border-mid rounded-lg text-sm text-secondary hover:bg-ivory-dark">
             追加
           </button>
         </div>
@@ -467,7 +467,7 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
         <div className="flex gap-1.5 mb-2">
           {(['url', 'file'] as const).map((m) => (
             <button key={m} type="button" onClick={() => setPhotoMode(m)}
-              className={['text-xs px-3 py-1 rounded-full border transition-colors', photoMode === m ? 'bg-rose-500 text-white border-rose-500' : 'border-slate-300 text-slate-600 hover:bg-slate-50'].join(' ')}>
+              className={['text-xs px-3 py-1 rounded-full border transition-colors', photoMode === m ? 'bg-navy text-white border-navy' : 'border-border-w text-secondary hover:bg-ivory-dark'].join(' ')}>
               {m === 'url' ? 'URLを入力' : 'ファイルを選択'}
             </button>
           ))}
@@ -475,17 +475,17 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
         {photoMode === 'url' ? (
           <input type="text" value={form.photoUrl.startsWith('data:') ? '' : form.photoUrl} onChange={(e) => set('photoUrl', e.target.value)} placeholder="https://example.com/photo.jpg" className={inp} />
         ) : (
-          <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+          <div className="border border-border-w rounded-lg p-3 bg-ivory">
             <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleFileSelect} disabled={uploading}
-              className="text-sm text-slate-600 file:mr-3 file:text-xs file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-rose-50 file:text-rose-600 hover:file:bg-rose-100 file:cursor-pointer disabled:opacity-50" />
-            {uploading && <p className="text-xs text-slate-400 mt-2">アップロード中...</p>}
+              className="text-sm text-secondary file:mr-3 file:text-xs file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-navy-soft file:text-navy hover:file:bg-ivory-dark file:cursor-pointer disabled:opacity-50" />
+            {uploading && <p className="text-xs text-muted mt-2">アップロード中...</p>}
             {uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
           </div>
         )}
         {form.photoUrl && (
           <div className="mt-2 flex items-center gap-3">
-            <img src={form.photoUrl} alt="プレビュー" className="w-20 h-20 object-cover rounded-lg border border-slate-200" />
-            <button type="button" onClick={() => set('photoUrl', '')} className="text-xs text-red-400 hover:text-red-600">削除</button>
+            <img src={form.photoUrl} alt="プレビュー" className="w-20 h-20 object-cover rounded-lg border border-border-w" />
+            <button type="button" onClick={() => set('photoUrl', '')} className="text-xs text-muted hover:text-red-500">削除</button>
           </div>
         )}
       </div>
@@ -498,7 +498,7 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
 
       <div className="flex gap-3 pt-2">
         <button type="submit" disabled={loading}
-          className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
+          className="flex-1 bg-navy hover:bg-navy-dim disabled:opacity-40 text-white font-medium py-2.5 rounded-lg text-sm transition-colors">
           {loading ? '保存中...' : submitLabel}
         </button>
         {onDelete && (

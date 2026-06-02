@@ -48,16 +48,16 @@ export default function EditClothesPage() {
     router.push('/clothes');
   }
 
-  if (item === undefined) return <div className="text-center py-16 text-slate-400">読み込み中...</div>;
+  if (item === undefined) return <div className="text-center py-16 text-muted">読み込み中...</div>;
   if (item === null) return null;
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/clothes" className="text-slate-400 hover:text-slate-600 text-sm">← 戻る</Link>
-        <h1 className="text-2xl font-bold text-slate-900">服を編集</h1>
+        <Link href="/clothes" className="text-muted hover:text-secondary text-sm">← 戻る</Link>
+        <h1 className="text-xl font-medium text-ink tracking-wide">服を編集</h1>
       </div>
-      <div className="bg-white rounded-2xl p-6 shadow-sm max-w-lg">
+      <div className="bg-cream rounded-2xl p-6 border border-border-w shadow-[0_2px_12px_rgba(36,51,82,0.07)] max-w-lg">
         <ClothingForm
           initial={{
             category:    item.category,

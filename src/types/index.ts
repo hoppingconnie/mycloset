@@ -108,12 +108,12 @@ export const FEEDBACK_CONFIG: Record<
   FeedbackType,
   { label: string; activeClass: string }
 > = {
-  like:         { label: '♡ 好き',        activeClass: 'bg-rose-100 text-rose-600 border-rose-300' },
-  complimented: { label: '🌟 褒められた',  activeClass: 'bg-yellow-100 text-yellow-600 border-yellow-300' },
-  mood_up:      { label: '😊 気分が上がった', activeClass: 'bg-green-100 text-green-600 border-green-300' },
-  cold:         { label: '🥶 寒かった',    activeClass: 'bg-blue-100 text-blue-600 border-blue-300' },
-  hot:          { label: '🥵 暑かった',    activeClass: 'bg-orange-100 text-orange-600 border-orange-300' },
-  uncomfortable:{ label: '😣 動きにくかった', activeClass: 'bg-purple-100 text-purple-600 border-purple-300' },
+  like:         { label: '好き',          activeClass: 'bg-navy-soft text-navy border-navy/30' },
+  complimented: { label: '褒められた',    activeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+  mood_up:      { label: '気分が上がった', activeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  cold:         { label: '寒かった',      activeClass: 'bg-sky-50 text-sky-700 border-sky-200' },
+  hot:          { label: '暑かった',      activeClass: 'bg-orange-50 text-orange-700 border-orange-200' },
+  uncomfortable:{ label: '動きにくかった', activeClass: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
 export const DEFAULT_PURPOSES: string[] = [

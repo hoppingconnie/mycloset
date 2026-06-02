@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Sun, CalendarDays } from 'lucide-react';
 import { ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES } from '@/types';
 import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
@@ -9,7 +10,7 @@ import OutfitCard from './OutfitCard';
 function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
   if (!diagnostics || diagnostics.totalClothes === 0) {
     return (
-      <div className="text-center py-16 text-slate-400">
+      <div className="text-center py-16 text-muted">
         <p className="text-lg mb-1">服が登録されていません</p>
         <p className="text-sm">「服管理」タブから服を追加してください</p>
       </div>
@@ -215,44 +216,39 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-4">今日のコーデを探す</h1>
+      <h1 className="text-xl font-medium text-ink mb-4 tracking-wide">今日のコーデを探す</h1>
 
       {/* 案内パネル */}
-      <div className="bg-rose-50 border border-rose-100 rounded-2xl mb-6 overflow-hidden">
+      <div className="bg-navy-soft border border-[#D6DCE8] rounded-2xl mb-6 overflow-hidden">
         <button
           type="button"
           onClick={toggleInfo}
           className="w-full flex items-center justify-between px-5 py-3.5 text-left"
         >
-          <span className="text-sm font-semibold text-rose-700">💡 このアプリについて</span>
-          <span className="text-rose-400 text-xs">{infoOpen ? '▲ 閉じる' : '▼ 開く'}</span>
+          <span className="text-sm font-medium text-navy tracking-wide">このアプリについて</span>
+          <span className="text-muted text-xs">{infoOpen ? '▲ 閉じる' : '▼ 開く'}</span>
         </button>
         {infoOpen && (
-          <div className="px-5 pb-5 space-y-3 text-xs text-rose-900">
-            <p className="leading-relaxed">
-              このアプリは、AIが提案したコーディネートを参考に、楽しく時間をかけずに服選びをすることを目的としています。<br />
-              「こんな組み合わせもあるんだ」「今日はこれをベースに考えてみよう」という
-              <strong>アイディアやヒント</strong>として活用いただくことを想定しています。<br />
-              また、AIの提案を参考にすることで、コーディネートのバリエーションとヘビロテ服を増やすことで、手持ちの服をより活用することを目指しています。
+          <div className="px-5 pb-5 space-y-3 text-xs text-navy">
+            <p className="leading-relaxed text-secondary">
+              AIが提案するコーディネートを参考に、楽しく時間をかけずに服選びを。<br />
+              「こんな組み合わせもあるんだ」「今日はこれをベースに」という
+              <strong className="text-navy">アイディアやヒント</strong>としてご活用ください。
             </p>
-            <div className="bg-white bg-opacity-60 rounded-xl px-4 py-3 space-y-2">
-              <p className="font-semibold text-rose-800">おすすめの使い方</p>
-              <ul className="space-y-1.5 text-rose-800">
+            <div className="bg-cream rounded-xl px-4 py-3 space-y-2 border border-border-w">
+              <p className="font-medium text-navy text-[11px] tracking-wide">おすすめの使い方</p>
+              <ul className="space-y-1.5 text-secondary">
                 <li className="flex gap-2">
-                  <span className="shrink-0">•</span>
-                  <span>AIの提案をそのまま着る必要はありません。アイディアやヒントとしてお楽しみください。</span>
+                  <span className="shrink-0 text-greige">—</span>
+                  <span>AIの提案をそのまま着る必要はありません。ヒントとしてお楽しみください。</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="shrink-0">•</span>
-                  <span>最初はトップス・ボトムス・羽織りなど<strong>30着程度</strong>登録すると提案の幅が広がります。まずはよく着る服から登録し、隙間時間に少しずつ追加するのがおすすめです。</span>
+                  <span className="shrink-0 text-greige">—</span>
+                  <span>最初は<strong className="text-ink">30着程度</strong>登録すると提案の幅が広がります。</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="shrink-0">•</span>
-                  <span><strong>100着以上</strong>登録すると提案の幅がぐっと広がります。</span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="shrink-0">•</span>
-                  <span>「こんな服持っていたんだ」「意外とこの組み合わせもありかも」と、新しい発見があるかもしれません。</span>
+                  <span className="shrink-0 text-greige">—</span>
+                  <span><strong className="text-ink">100着以上</strong>登録すると提案の幅がぐっと広がります。</span>
                 </li>
               </ul>
             </div>
@@ -260,37 +256,40 @@ export default function Home() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm mb-6 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-cream rounded-2xl p-6 border border-border-w shadow-[0_2px_12px_rgba(36,51,82,0.07)] mb-6 space-y-4">
         {/* 気温 */}
         <div className="space-y-2">
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">最高気温 (°C)</label>
+              <label className="block text-sm font-medium text-secondary mb-1">最高気温 (°C)</label>
               <input type="number" value={maxTemp}
                 onChange={(e) => { setMaxTemp(e.target.value); setWeatherMsg(''); }}
                 placeholder="例: 25" required
-                className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+                className="w-28 border border-border-mid rounded-lg px-3 py-2 text-sm bg-ivory focus:outline-none focus:ring-2 focus:ring-navy/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">最低気温 (°C)</label>
+              <label className="block text-sm font-medium text-secondary mb-1">最低気温 (°C)</label>
               <input type="number" value={minTemp}
                 onChange={(e) => { setMinTemp(e.target.value); setWeatherMsg(''); }}
                 placeholder="例: 15" required
-                className="w-28 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
+                className="w-28 border border-border-mid rounded-lg px-3 py-2 text-sm bg-ivory focus:outline-none focus:ring-2 focus:ring-navy/40" />
             </div>
           </div>
           {/* 天気取得ボタン */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-slate-400">天気から自動入力:</span>
+            <span className="text-xs text-muted">天気から自動入力:</span>
             {([0, 1] as const).map((day) => (
               <button
                 key={day}
                 type="button"
                 onClick={() => fetchWeather(day)}
                 disabled={weatherDay !== null}
-                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-sky-200 text-sky-600 hover:bg-sky-50 disabled:opacity-40 transition-colors"
+                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-border-mid text-navy hover:bg-ivory-dark disabled:opacity-40 transition-colors"
               >
-                {weatherDay === day ? '取得中…' : day === 0 ? '🌤 今日' : '📅 明日'}
+                {day === 0
+                  ? <Sun size={11} strokeWidth={1.5} />
+                  : <CalendarDays size={11} strokeWidth={1.5} />}
+                {weatherDay === day ? '取得中…' : day === 0 ? '今日' : '明日'}
               </button>
             ))}
           </div>
@@ -300,9 +299,9 @@ export default function Home() {
 
         {/* 用途タグ */}
         <div>
-          <p className="text-sm font-medium text-slate-700 mb-2">
+          <p className="text-sm font-medium text-secondary mb-2">
             今日はどんなシーン？
-            <span className="text-slate-400 font-normal ml-1">（任意）</span>
+            <span className="text-muted font-normal ml-1">（任意）</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {allPurposes.map((p) => (
@@ -313,8 +312,8 @@ export default function Home() {
                 className={[
                   'px-3 py-1.5 rounded-full text-sm border transition-colors',
                   selectedPurposes.includes(p)
-                    ? 'bg-rose-500 text-white border-rose-500'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+                    ? 'bg-navy text-white border-navy'
+                    : 'border-border-w text-secondary hover:bg-ivory-dark',
                 ].join(' ')}
               >
                 {p}
@@ -324,19 +323,19 @@ export default function Home() {
         </div>
 
         <button type="submit" disabled={loading}
-          className="bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
+          className="bg-navy hover:bg-navy-dim disabled:opacity-40 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors">
           {loading ? '生成中...' : 'コーデを提案する'}
         </button>
       </form>
 
       {/* アンケート */}
-      <p className="text-xs text-slate-400 text-center mt-3 mb-2">
+      <p className="text-xs text-muted text-center mt-3 mb-2">
         さらに役立つアプリにするため、
         <a
           href="https://forms.gle/aGWyWiP4eZL5bMTW7"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-slate-600"
+          className="underline hover:text-secondary"
         >
           アンケート
         </a>
@@ -350,26 +349,26 @@ export default function Home() {
       {record && (
         <div>
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <p className="text-sm text-slate-500">{tempMessage(record.maxTemp, record.minTemp)}</p>
+            <p className="text-sm text-secondary">{tempMessage(record.maxTemp, record.minTemp)}</p>
             {record.relaxed && (
               <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full">
-                ⚠️ 色ルールの条件を少し緩めました
+                色ルールの条件を少し緩めました
               </span>
             )}
             {fallbackLevel === 1 && (
-              <span className="inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-full">
-                ℹ️ 気温の厚さ条件を緩めて提案しました
+              <span className="inline-flex items-center gap-1 text-xs bg-navy-soft text-navy border border-[#D6DCE8] px-2.5 py-1 rounded-full">
+                気温の厚さ条件を緩めて提案しました
               </span>
             )}
             {fallbackLevel === 2 && (
-              <span className="inline-flex items-center gap-1 text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-full">
-                ℹ️ 厚さ・アウター条件を緩めて提案しました
+              <span className="inline-flex items-center gap-1 text-xs bg-navy-soft text-navy border border-[#D6DCE8] px-2.5 py-1 rounded-full">
+                厚さ・アウター条件を緩めて提案しました
               </span>
             )}
             {record.purposes.length > 0 && (
               <div className="flex gap-1 flex-wrap">
                 {record.purposes.map((p) => (
-                  <span key={p} className="text-xs bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full border border-rose-100">
+                  <span key={p} className="text-xs bg-navy-soft text-navy px-2 py-0.5 rounded-full border border-[#D6DCE8]">
                     {p}
                   </span>
                 ))}
