@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { Noto_Sans_JP } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import BottomNav from './NavBar';
 import MigrationRunner from './MigrationRunner';
+
+const GA_ID = 'G-VRJ7ZM17CB';
 
 const notoSansJP = Noto_Sans_JP({
   weight: ['300', '400', '500'],
@@ -27,6 +30,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ja" className={notoSansJP.className}>
       <body className="min-h-screen bg-ivory">
+        {/* Google Analytics */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga-init" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${GA_ID}');
+        `}</Script>
+
         <MigrationRunner />
         {/* 上部ヘッダー */}
         <header

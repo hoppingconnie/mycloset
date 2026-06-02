@@ -5,6 +5,7 @@ import { ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES } from '@/ty
 import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
 import { photoStore } from '@/lib/photoStore';
+import { logEvent } from '@/lib/analytics';
 import OutfitCard from './OutfitCard';
 
 function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
@@ -199,6 +200,13 @@ export default function Home() {
 
       storage.suggestions.create(newRecord);
       setRecord(newRecord);
+
+      // Analytics
+      logEvent('coordinate_generated', {
+        outfit_count:   outfitsWithPhotos.length,
+        fallback_level: result.fallbackLevel,
+        has_purposes:   selectedPurposes.length > 0,
+      });
     } catch {
       setError('提案の生成に失敗しました。服が登録されているか確認してください。');
     } finally {
@@ -282,7 +290,7 @@ export default function Home() {
               <button
                 key={day}
                 type="button"
-                onClick={() => fetchWeather(day)}
+                onClick={() => { logEvent('weather_button_clicked', { day: day === 0 ? 'today' : 'tomorrow' }); fetchWeather(day); }}
                 disabled={weatherDay !== null}
                 className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-border-mid text-navy hover:bg-ivory-dark disabled:opacity-40 transition-colors"
               >

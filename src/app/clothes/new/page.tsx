@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ClothingItem } from '@/types';
 import { storage } from '@/lib/clientStorage';
 import { photoStore } from '@/lib/photoStore';
+import { logEvent } from '@/lib/analytics';
 import ClothingForm, { ClothingFormData } from '../ClothingForm';
 
 export default function NewClothesPage() {
@@ -27,6 +28,12 @@ export default function NewClothesPage() {
     };
     storage.clothes.create(item);                          // localStorage（写真なし）
     if (form.photoUrl) await photoStore.set(id, form.photoUrl); // IndexedDB（写真）
+
+    // Analytics
+    logEvent('clothes_added', { category: form.category });
+    const total = storage.clothes.getAll().length;
+    if (total === 30) logEvent('clothes_count_30');
+
     router.push('/clothes');
   }
 
