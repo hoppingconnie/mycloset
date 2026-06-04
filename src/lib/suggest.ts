@@ -39,6 +39,17 @@ function getOutfitItems(outfit: Outfit): ClothingItem[] {
   );
 }
 
+// ── ランダム揺らぎ ─────────────────────────────────────────────────────────────
+// 毎回同じ提案にならないよう、スコアに小さなランダム揺らぎを加える。
+// フィードバック重み（±10〜20）と同程度の範囲にとどめることで、
+// 好みの傾向は活かしつつ、生成するたびに違うコーデが出るようにする。
+const ITEM_JITTER   = 20; // アイテムプール選択時の揺らぎ（± この値）
+const OUTFIT_JITTER = 30; // コーデ最終スコアの揺らぎ（± この値）
+
+function jitter(range: number): number {
+  return (Math.random() - 0.5) * range * 2;
+}
+
 // ── アイテムスコア（フィードバック履歴） ─────────────────────────────────────────
 
 const FEEDBACK_WEIGHTS: Partial<Record<FeedbackType, number>> = {
@@ -221,11 +232,13 @@ function buildCandidates(
   outersAvailable: number;
 } {
   function sortedPool(items: ClothingItem[]): ClothingItem[] {
-    return [...items].sort((a, b) => {
-      const sa = (itemScores.get(a.id) ?? 0) + purposeBonus(a, purposes);
-      const sb = (itemScores.get(b.id) ?? 0) + purposeBonus(b, purposes);
-      return sb - sa;
-    });
+    return [...items]
+      .map((item) => ({
+        item,
+        score: (itemScores.get(item.id) ?? 0) + purposeBonus(item, purposes) + jitter(ITEM_JITTER),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map(({ item }) => item);
   }
 
   const allTops    = clothes.filter((c) => c.category === 'top');
@@ -369,7 +382,10 @@ export function suggestOutfits(params: {
     }
 
     const scored = info.candidates
-      .map((outfit) => ({ outfit, score: scoreOutfit(outfit, purposes, colorRules, itemScores) }))
+      .map((outfit) => ({
+        outfit,
+        score: scoreOutfit(outfit, purposes, colorRules, itemScores) + jitter(OUTFIT_JITTER),
+      }))
       .sort((a, b) => b.score - a.score);
 
     const valid = scored.filter((s) => s.score > HARD_THRESHOLD);
