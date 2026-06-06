@@ -136,6 +136,15 @@ export const storage = {
       save(KEY.suggestions, list.slice(0, 100));
       return record;                       // 呼び出し元には写真あり元データを返す（表示用）
     },
+    /** adoptedIndex / eveningFeedbackDone など写真以外のフィールドを部分更新する */
+    patchRecord(id: string, patch: Partial<OutfitRecord>): OutfitRecord | null {
+      const list = this.getAll();
+      const idx = list.findIndex((r) => r.id === id);
+      if (idx === -1) return null;
+      list[idx] = { ...list[idx], ...patch };
+      save(KEY.suggestions, list);
+      return list[idx];
+    },
     toggleFeedback(
       id: string,
       outfitIndex: number,

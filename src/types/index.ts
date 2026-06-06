@@ -54,6 +54,8 @@ export interface OutfitRecord {
   outfits: Outfit[];
   feedbacks: FeedbackEntry[];
   relaxed?: boolean;
+  adoptedIndex?: number;         // 採用したコーデのインデックス (0/1/2)
+  eveningFeedbackDone?: boolean; // 翌朝の評価が完了またはスキップされた
   createdAt: string;
 }
 

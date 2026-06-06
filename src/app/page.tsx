@@ -1,12 +1,91 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Sun, CalendarDays } from 'lucide-react';
-import { ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES } from '@/types';
+import { Sun, CalendarDays, X } from 'lucide-react';
+import {
+  ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES, FEEDBACK_CONFIG,
+} from '@/types';
 import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
 import { photoStore } from '@/lib/photoStore';
 import { logEvent } from '@/lib/analytics';
 import OutfitCard from './OutfitCard';
+
+// ── 翌朝評価カード ─────────────────────────────────────────────────────────────
+
+const EVENING_FEEDBACKS: FeedbackType[] = [
+  'complimented', 'mood_up', 'cold', 'hot', 'uncomfortable',
+];
+
+function EveningFeedbackCard({
+  record,
+  onFeedback,
+  onDismiss,
+}: {
+  record: OutfitRecord;
+  onFeedback: (type: FeedbackType) => void;
+  onDismiss: () => void;
+}) {
+  if (record.adoptedIndex === undefined) return null;
+  const outfit = record.outfits[record.adoptedIndex];
+  if (!outfit) return null;
+
+  const items = [outfit.dress, outfit.top, outfit.bottom, outfit.outer, outfit.shoes, outfit.accessory]
+    .filter((i): i is ClothingItem => !!i);
+  const activeFeedbacks = record.feedbacks
+    .filter((f) => f.outfitIndex === record.adoptedIndex)
+    .map((f) => f.type);
+
+  return (
+    <div className="bg-cream rounded-2xl p-4 border border-border-w shadow-[0_2px_12px_rgba(36,51,82,0.07)] mb-6">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="text-[9px] font-medium text-muted uppercase tracking-[0.16em] mb-0.5">
+            昨日のコーデ
+          </p>
+          <p className="text-sm font-medium text-ink">着てみていかがでしたか？</p>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="p-1 -m-1 text-muted hover:text-secondary transition-colors"
+          aria-label="閉じる"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* 採用コーデのアイテム名 */}
+      <div className="bg-ivory rounded-xl px-3 py-2.5 mb-3 flex flex-wrap gap-x-3 gap-y-0.5">
+        {items.map((item) => (
+          <span key={item.id} className="text-xs text-secondary">
+            {item.name}
+          </span>
+        ))}
+      </div>
+
+      {/* 評価ボタン（複数選択可・即時保存） */}
+      <div className="flex flex-wrap gap-1.5">
+        {EVENING_FEEDBACKS.map((type) => {
+          const { label, activeClass } = FEEDBACK_CONFIG[type];
+          const active = activeFeedbacks.includes(type);
+          return (
+            <button
+              key={type}
+              onClick={() => onFeedback(type)}
+              className={[
+                'text-[11px] px-3 py-1.5 rounded-lg border transition-colors',
+                active ? activeClass : 'border-border-w text-secondary hover:bg-ivory-dark',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── コーデ提案なし時のメッセージ ───────────────────────────────────────────────
 
 function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
   if (!diagnostics || diagnostics.totalClothes === 0) {
@@ -32,7 +111,6 @@ function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
   if (diagnostics.outersNeeded && diagnostics.outersAvailable === 0) {
     reasons.push('この気温にはアウターが必要ですが、登録がありません');
   }
-
   if (reasons.length === 0) {
     reasons.push('登録している服の組み合わせで提案できるコーデがありません');
   }
@@ -43,8 +121,8 @@ function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
       <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside mb-4">
         {reasons.map((r) => <li key={r}>{r}</li>)}
       </ul>
-      <div className="text-xs text-slate-500 space-y-0.5 bg-white rounded-lg px-4 py-3 border border-slate-100">
-        <p className="font-medium text-slate-600 mb-1">登録状況</p>
+      <div className="text-xs text-secondary space-y-0.5 bg-ivory rounded-lg px-4 py-3 border border-border-w">
+        <p className="font-medium text-ink mb-1">登録状況</p>
         <p>トップス: {diagnostics.topsAll}点（気温対応: {diagnostics.topsInTemp}点）</p>
         <p>ワンピース: {diagnostics.dressesAll}点（気温対応: {diagnostics.dressesInTemp}点）</p>
         <p>ボトムス: {diagnostics.bottoms}点</p>
@@ -55,21 +133,25 @@ function NoOutfitMessage({ diagnostics }: { diagnostics: Diagnostics | null }) {
   );
 }
 
+// ── メインページ ───────────────────────────────────────────────────────────────
+
 export default function Home() {
   const [maxTemp, setMaxTemp] = useState('');
   const [minTemp, setMinTemp] = useState('');
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
   const [allPurposes, setAllPurposes] = useState<string[]>(DEFAULT_PURPOSES);
-  const [record, setRecord] = useState<OutfitRecord | null>(null);
+  const [record, setRecord]           = useState<OutfitRecord | null>(null);
   const [fallbackLevel, setFallbackLevel] = useState<0 | 1 | 2>(0);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  // 翌朝評価
+  const [pendingRecord, setPendingRecord] = useState<OutfitRecord | null>(null);
   // 天気取得
-  const [weatherDay, setWeatherDay]   = useState<0 | 1 | null>(null); // null=非取得中
+  const [weatherDay, setWeatherDay]   = useState<0 | 1 | null>(null);
   const [weatherMsg, setWeatherMsg]   = useState('');
   const [weatherErr, setWeatherErr]   = useState('');
-  // 案内パネル：初回は開いた状態、一度閉じると次回から閉じたまま
+  // 案内パネル
   const [infoOpen, setInfoOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem('wardrobe:infoSeen') !== '1';
@@ -82,10 +164,17 @@ export default function Home() {
   }
 
   useEffect(() => {
+    // 用途タグ一覧
     const clothes: ClothingItem[] = storage.clothes.getAll();
     const custom = clothes.flatMap((c) => c.purposeTags ?? []);
-    const merged = [...new Set([...DEFAULT_PURPOSES, ...custom])];
-    setAllPurposes(merged);
+    setAllPurposes([...new Set([...DEFAULT_PURPOSES, ...custom])]);
+
+    // 前日の採用コーデを探す（翌朝フィードバック用）
+    const today = new Date().toISOString().slice(0, 10);
+    const pending = storage.suggestions.getAll().find(
+      (r) => r.adoptedIndex !== undefined && !r.eveningFeedbackDone && r.date < today
+    );
+    if (pending) setPendingRecord(pending);
   }, []);
 
   function togglePurpose(p: string) {
@@ -94,14 +183,12 @@ export default function Home() {
     );
   }
 
-  // ── 天気取得 ─────────────────────────────────────────────────────────────────
-  // Open-Meteo は無料・キーなし。位置情報はリクエスト後に保持しない。
+  // ── 天気取得 ───────────────────────────────────────────────────────────────
   async function fetchWeather(dayOffset: 0 | 1) {
     setWeatherDay(dayOffset);
     setWeatherMsg('');
     setWeatherErr('');
     try {
-      // 1. ブラウザの位置情報取得（ボタン押下時のみ求める）
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         if (!navigator.geolocation) {
           reject(new Error('このブラウザは位置情報に対応していません'));
@@ -115,8 +202,6 @@ export default function Home() {
           );
         }, { timeout: 10000 });
       });
-
-      // 2. Open-Meteo で今日・明日の最高/最低気温を取得
       const { latitude, longitude } = position.coords;
       const res = await fetch(
         `https://api.open-meteo.com/v1/forecast` +
@@ -124,14 +209,11 @@ export default function Home() {
         `&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=2`
       );
       if (!res.ok) throw new Error('天気データの取得に失敗しました');
-
       const data = await res.json() as {
         daily: { temperature_2m_max: number[]; temperature_2m_min: number[] };
       };
       const max = Math.round(data.daily.temperature_2m_max[dayOffset]);
       const min = Math.round(data.daily.temperature_2m_min[dayOffset]);
-
-      // 3. 気温欄に自動入力（ユーザーは後から修正可能）
       setMaxTemp(String(max));
       setMinTemp(String(min));
       setWeatherMsg(
@@ -139,15 +221,14 @@ export default function Home() {
       );
     } catch (err) {
       setWeatherErr(
-        err instanceof Error
-          ? err.message
-          : '気温の取得に失敗しました。手動で入力してください。'
+        err instanceof Error ? err.message : '気温の取得に失敗しました。手動で入力してください。'
       );
     } finally {
       setWeatherDay(null);
     }
   }
 
+  // ── コーデ生成 ─────────────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -169,7 +250,6 @@ export default function Home() {
       setFallbackLevel(result.fallbackLevel);
       setDiagnostics(result.diagnostics);
 
-      // 写真を IndexedDB から読み込み、outfit に付与してから表示・保存する
       const photoMap = await photoStore.getAll();
       const addPhoto = (item: ClothingItem | undefined): ClothingItem | undefined => {
         if (!item) return undefined;
@@ -201,7 +281,6 @@ export default function Home() {
       storage.suggestions.create(newRecord);
       setRecord(newRecord);
 
-      // Analytics
       logEvent('coordinate_generated', {
         outfit_count:   outfitsWithPhotos.length,
         fallback_level: result.fallbackLevel,
@@ -214,17 +293,50 @@ export default function Home() {
     }
   }
 
+  // ── 好き（カード上のフィードバック） ─────────────────────────────────────────
   function handleFeedback(outfitIndex: number, type: FeedbackType) {
     if (!record) return;
     const updated = storage.suggestions.toggleFeedback(record.id, outfitIndex, type);
-    // storage から返るレコードは写真なし。feedbacks だけ更新し、
-    // outfits（写真つき）は in-memory の record を維持して表示を壊さない。
     if (updated) setRecord({ ...record, feedbacks: updated.feedbacks });
+  }
+
+  // ── 採用する ───────────────────────────────────────────────────────────────
+  function handleAdopt(outfitIndex: number) {
+    if (!record) return;
+    const newIndex = record.adoptedIndex === outfitIndex ? undefined : outfitIndex;
+    storage.suggestions.patchRecord(record.id, { adoptedIndex: newIndex });
+    setRecord({ ...record, adoptedIndex: newIndex });
+  }
+
+  // ── 翌朝評価 ───────────────────────────────────────────────────────────────
+  function handleEveningFeedback(type: FeedbackType) {
+    if (!pendingRecord || pendingRecord.adoptedIndex === undefined) return;
+    const updated = storage.suggestions.toggleFeedback(
+      pendingRecord.id,
+      pendingRecord.adoptedIndex,
+      type
+    );
+    if (updated) setPendingRecord({ ...pendingRecord, feedbacks: updated.feedbacks });
+  }
+
+  function handleEveningDismiss() {
+    if (!pendingRecord) return;
+    storage.suggestions.patchRecord(pendingRecord.id, { eveningFeedbackDone: true });
+    setPendingRecord(null);
   }
 
   return (
     <div>
       <h1 className="text-xl font-medium text-ink mb-4 tracking-wide">今日のコーデを探す</h1>
+
+      {/* 翌朝評価カード */}
+      {pendingRecord && (
+        <EveningFeedbackCard
+          record={pendingRecord}
+          onFeedback={handleEveningFeedback}
+          onDismiss={handleEveningDismiss}
+        />
+      )}
 
       {/* 案内パネル */}
       <div className="bg-navy-soft border border-[#D6DCE8] rounded-2xl mb-6 overflow-hidden">
@@ -290,7 +402,10 @@ export default function Home() {
               <button
                 key={day}
                 type="button"
-                onClick={() => { logEvent('weather_button_clicked', { day: day === 0 ? 'today' : 'tomorrow' }); fetchWeather(day); }}
+                onClick={() => {
+                  logEvent('weather_button_clicked', { day: day === 0 ? 'today' : 'tomorrow' });
+                  fetchWeather(day);
+                }}
                 disabled={weatherDay !== null}
                 className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-border-mid text-navy hover:bg-ivory-dark disabled:opacity-40 transition-colors"
               >
@@ -393,8 +508,10 @@ export default function Home() {
                   key={i}
                   outfit={outfit}
                   index={i}
-                  feedbacks={record.feedbacks.filter((f) => f.outfitIndex === i).map((f) => f.type)}
-                  onFeedback={(type) => handleFeedback(i, type)}
+                  liked={record.feedbacks.some((f) => f.outfitIndex === i && f.type === 'like')}
+                  adopted={record.adoptedIndex === i}
+                  onLike={() => handleFeedback(i, 'like')}
+                  onAdopt={() => handleAdopt(i)}
                 />
               ))}
             </div>

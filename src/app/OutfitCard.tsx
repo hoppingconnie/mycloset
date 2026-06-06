@@ -1,11 +1,11 @@
 'use client';
 import {
   Shirt, AlignJustify, Layers, Wind, Footprints, Gem,
-  Heart, Star, Smile, Thermometer, Frown, LucideIcon,
+  Heart, Check, LucideIcon,
 } from 'lucide-react';
 import {
-  ClothingItem, Category, FeedbackType, Outfit,
-  CATEGORY_LABELS, THICKNESS_LABELS, FEEDBACK_CONFIG,
+  ClothingItem, Category, Outfit,
+  CATEGORY_LABELS, THICKNESS_LABELS,
 } from '@/types';
 
 // カテゴリ → Lucide アイコン
@@ -19,21 +19,13 @@ const CATEGORY_ICON: Record<Category, LucideIcon> = {
   accessory: Gem,
 };
 
-// フィードバック → Lucide アイコン
-const FEEDBACK_ICON: Record<FeedbackType, LucideIcon> = {
-  like:          Heart,
-  complimented:  Star,
-  mood_up:       Smile,
-  cold:          Thermometer,
-  hot:           Thermometer,
-  uncomfortable: Frown,
-};
-
 interface Props {
   outfit: Outfit;
   index: number;
-  feedbacks: FeedbackType[];
-  onFeedback: (type: FeedbackType) => void;
+  liked: boolean;
+  adopted: boolean;
+  onLike: () => void;
+  onAdopt: () => void;
 }
 
 function ItemSlot({ item, category }: { item?: ClothingItem; category: Category }) {
@@ -64,14 +56,12 @@ function ItemSlot({ item, category }: { item?: ClothingItem; category: Category 
   );
 }
 
-const FEEDBACK_ROWS: FeedbackType[][] = [
-  ['like', 'complimented', 'mood_up'],
-  ['cold', 'hot', 'uncomfortable'],
-];
-
-export default function OutfitCard({ outfit, index, feedbacks, onFeedback }: Props) {
+export default function OutfitCard({ outfit, index, liked, adopted, onLike, onAdopt }: Props) {
   return (
-    <div className="bg-cream rounded-2xl p-4 border border-border-w shadow-[0_2px_12px_rgba(36,51,82,0.07)]">
+    <div className={[
+      'bg-cream rounded-2xl p-4 border shadow-[0_2px_12px_rgba(36,51,82,0.07)] transition-colors',
+      adopted ? 'border-navy/40' : 'border-border-w',
+    ].join(' ')}>
       {/* ヘッダー */}
       <p className="text-[9px] font-medium text-muted mb-3 uppercase tracking-[0.16em]">
         Coordinate {String(index + 1).padStart(2, '0')}
@@ -98,31 +88,39 @@ export default function OutfitCard({ outfit, index, feedbacks, onFeedback }: Pro
         )}
       </div>
 
-      {/* フィードバック */}
-      <div className="space-y-1 pt-1 border-t border-border-w">
-        {FEEDBACK_ROWS.map((row, ri) => (
-          <div key={ri} className="grid grid-cols-3 gap-1 mt-1">
-            {row.map((type) => {
-              const { label, activeClass } = FEEDBACK_CONFIG[type];
-              const active = feedbacks.includes(type);
-              const FbIcon = FEEDBACK_ICON[type];
-              return (
-                <button
-                  key={type}
-                  onClick={() => onFeedback(type)}
-                  className={[
-                    'text-[10px] py-1.5 rounded-lg border transition-colors leading-tight',
-                    'flex items-center justify-center gap-1',
-                    active ? activeClass : 'border-border-w text-secondary hover:bg-ivory-dark',
-                  ].join(' ')}
-                >
-                  <FbIcon size={10} strokeWidth={1.5} />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+      {/* アクションボタン */}
+      <div className="flex gap-2 pt-2 border-t border-border-w">
+        {/* 好き */}
+        <button
+          onClick={onLike}
+          className={[
+            'flex items-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] transition-colors',
+            liked
+              ? 'bg-navy-soft text-navy border-navy/30'
+              : 'border-border-w text-muted hover:bg-ivory-dark',
+          ].join(' ')}
+        >
+          <Heart
+            size={11}
+            strokeWidth={liked ? 2 : 1.5}
+            fill={liked ? 'currentColor' : 'none'}
+          />
+          好き
+        </button>
+
+        {/* 採用する */}
+        <button
+          onClick={onAdopt}
+          className={[
+            'flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border text-[11px] font-medium transition-colors',
+            adopted
+              ? 'bg-navy text-white border-navy'
+              : 'border-border-mid text-secondary hover:bg-ivory-dark',
+          ].join(' ')}
+        >
+          <Check size={11} strokeWidth={2} />
+          {adopted ? '採用中' : '採用する'}
+        </button>
       </div>
     </div>
   );
