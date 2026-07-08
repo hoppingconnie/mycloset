@@ -145,6 +145,21 @@ export const storage = {
       save(KEY.suggestions, list);
       return list[idx];
     },
+    /** バックアップからのインポート用: 既存にないIDのレコードだけ日付降順にマージして追加する */
+    restoreMany(records: OutfitRecord[]): number {
+      const existing    = this.getAll();
+      const existingIds = new Set(existing.map((r) => r.id));
+      const toAdd = records
+        .filter((r) => r.id && !existingIds.has(r.id))
+        .map(stripRecordPhotos);
+      if (toAdd.length === 0) return 0;
+
+      const merged = [...existing, ...toAdd].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      save(KEY.suggestions, merged);
+      return toAdd.length;
+    },
     toggleFeedback(
       id: string,
       outfitIndex: number,

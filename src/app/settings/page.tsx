@@ -68,8 +68,9 @@ export default function SettingsPage() {
       const raw  = await file.text();
       const data = JSON.parse(raw);
 
-      let addedClothes    = 0;
-      let addedColorRules = 0;
+      let addedClothes     = 0;
+      let addedColorRules  = 0;
+      let addedSuggestions = 0;
 
       const migrateItem = (item: ClothingItem): ClothingItem => ({
         ...item,
@@ -97,6 +98,9 @@ export default function SettingsPage() {
             addedColorRules++;
           }
         }
+        addedSuggestions = storage.suggestions.restoreMany(
+          (data.suggestions ?? []) as OutfitRecord[]
+        );
       }
       // ② 旧サーバーの data/clothes.json 形式（ClothingItem の配列）
       else if (Array.isArray(data)) {
@@ -117,7 +121,7 @@ export default function SettingsPage() {
       refreshStats();
       setImportMsg({
         ok:   true,
-        text: `インポート完了 — 服 ${addedClothes} 件・色ルール ${addedColorRules} 件を追加しました`,
+        text: `インポート完了 — 服 ${addedClothes} 件・色ルール ${addedColorRules} 件・提案履歴 ${addedSuggestions} 件を追加しました`,
       });
     } catch {
       setImportMsg({ ok: false, text: 'エラー: ファイルの形式が正しくありません' });
