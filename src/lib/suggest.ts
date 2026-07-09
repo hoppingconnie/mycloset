@@ -2,6 +2,7 @@ import {
   ClothingItem,
   ColorRule,
   FeedbackType,
+  Formality,
   Outfit,
   OutfitRecord,
   Thickness,
@@ -119,6 +120,21 @@ function purposeBonus(item: ClothingItem, purposes: string[]): number {
   return 0; // タグなし = 汎用品として中立
 }
 
+/** フォーマル度によるスコアボーナス（基本軸。用途タグより弱めに効かせる）
+ *    一致:       +15
+ *    隣接レベル:   0  (casual↔smart-casual, smart-casual↔formal は許容範囲)
+ *    対極:       -15  (casual↔formal)
+ */
+const FORMALITY_ORDER: Formality[] = ['casual', 'smart-casual', 'formal'];
+
+function formalityBonus(item: ClothingItem, formality: Formality | null | undefined): number {
+  if (!formality) return 0;
+  const diff = Math.abs(FORMALITY_ORDER.indexOf(item.formality) - FORMALITY_ORDER.indexOf(formality));
+  if (diff === 0) return 15;
+  if (diff === 1) return 0;
+  return -15;
+}
+
 // ── コーデスコア ───────────────────────────────────────────────────────────────
 
 const HARD_THRESHOLD = -500; // これ以下は「避けたい」として除外
@@ -126,16 +142,18 @@ const HARD_THRESHOLD = -500; // これ以下は「避けたい」として除外
 function scoreOutfit(
   outfit: Outfit,
   purposes: string[],
+  formality: Formality | null | undefined,
   colorRules: ColorRule[],
   itemScores: Map<string, number>
 ): number {
   const items = getOutfitItems(outfit);
   let score = 0;
 
-  // アイテムごとのフィードバックスコア + 用途ボーナス
+  // アイテムごとのフィードバックスコア + 用途ボーナス + フォーマル度ボーナス
   for (const item of items) {
     score += itemScores.get(item.id) ?? 0;
     score += purposeBonus(item, purposes);
+    score += formalityBonus(item, formality);
   }
 
   // 色ルール
@@ -219,6 +237,7 @@ function buildCandidates(
   needOuter: boolean,
   oThick: Thickness[],
   purposes: string[],
+  formality: Formality | null | undefined,
   itemScores: Map<string, number>,
   minTemp: number,
 ): {
@@ -235,7 +254,7 @@ function buildCandidates(
     return [...items]
       .map((item) => ({
         item,
-        score: (itemScores.get(item.id) ?? 0) + purposeBonus(item, purposes) + jitter(ITEM_JITTER),
+        score: (itemScores.get(item.id) ?? 0) + purposeBonus(item, purposes) + formalityBonus(item, formality) + jitter(ITEM_JITTER),
       }))
       .sort((a, b) => b.score - a.score)
       .map(({ item }) => item);
@@ -259,8 +278,8 @@ function buildCandidates(
   const outers = [...outerRaw].sort((a, b) => {
     const jacketBonus = (item: ClothingItem) =>
       minTemp >= 10 && item.category === 'jacket' ? 30 : 0;
-    const sa = (itemScores.get(a.id) ?? 0) + purposeBonus(a, purposes) + jacketBonus(a);
-    const sb = (itemScores.get(b.id) ?? 0) + purposeBonus(b, purposes) + jacketBonus(b);
+    const sa = (itemScores.get(a.id) ?? 0) + purposeBonus(a, purposes) + formalityBonus(a, formality) + jacketBonus(a);
+    const sb = (itemScores.get(b.id) ?? 0) + purposeBonus(b, purposes) + formalityBonus(b, formality) + jacketBonus(b);
     return sb - sa;
   });
   const shoes       = sortedPool(clothes.filter((c) => c.category === 'shoes'));
@@ -346,10 +365,11 @@ export function suggestOutfits(params: {
   maxTemp: number;
   minTemp: number;
   purposes: string[];
+  formality?: Formality | null;
   colorRules: ColorRule[];
   pastRecords: OutfitRecord[];
 }): SuggestResult {
-  const { clothes, maxTemp, minTemp, purposes, colorRules, pastRecords } = params;
+  const { clothes, maxTemp, minTemp, purposes, formality, colorRules, pastRecords } = params;
 
   const tThick   = topThickness(maxTemp);
   const needOuter = minTemp < 18;
@@ -361,7 +381,7 @@ export function suggestOutfits(params: {
     forceNoOuter: boolean,
   ): { outfits: Outfit[]; relaxed: boolean; diagnostics: Diagnostics } {
     const useOuter = !forceNoOuter && needOuter;
-    const info = buildCandidates(clothes, thicknessFilter, useOuter, oThick, purposes, itemScores, minTemp);
+    const info = buildCandidates(clothes, thicknessFilter, useOuter, oThick, purposes, formality, itemScores, minTemp);
 
     const diagnostics: Diagnostics = {
       totalClothes:    clothes.length,
@@ -384,7 +404,7 @@ export function suggestOutfits(params: {
     const scored = info.candidates
       .map((outfit) => ({
         outfit,
-        score: scoreOutfit(outfit, purposes, colorRules, itemScores) + jitter(OUTFIT_JITTER),
+        score: scoreOutfit(outfit, purposes, formality, colorRules, itemScores) + jitter(OUTFIT_JITTER),
       }))
       .sort((a, b) => b.score - a.score);
 

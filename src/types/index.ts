@@ -50,6 +50,7 @@ export interface OutfitRecord {
   date: string;
   maxTemp: number;
   minTemp: number;
+  formality?: Formality;
   purposes: string[];
   outfits: Outfit[];
   feedbacks: FeedbackEntry[];
@@ -119,8 +120,13 @@ export const FEEDBACK_CONFIG: Record<
 };
 
 export const DEFAULT_PURPOSES: string[] = [
-  '会社', '女友達と外出', '旅行', '雨の日', '疲れている日', '学校行事・PTA',
+  '雨の日', '疲れている日', '気合ブースト',
 ];
+
+/** デフォルト用途タグの表示装飾（データ上のタグ名には含めない） */
+export const PURPOSE_TAG_EMOJI: Record<string, string> = {
+  '気合ブースト': '🔥',
+};
 
 /** 旧タグ名 → 新タグ名 のマイグレーションマップ */
 export const PURPOSE_TAG_MIGRATION: Record<string, string> = {

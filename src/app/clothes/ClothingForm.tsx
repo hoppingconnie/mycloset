@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Category, Thickness, Season, Formality, DEFAULT_PURPOSES } from '@/types';
+import { Category, Thickness, Season, Formality, DEFAULT_PURPOSES, PURPOSE_TAG_EMOJI } from '@/types';
 
 export interface ClothingFormData {
   category: Category;
@@ -422,7 +422,7 @@ export default function ClothingForm({ initial, onSubmit, submitLabel, onDelete 
         <div className="flex flex-wrap gap-1.5 mt-1">
           {DEFAULT_PURPOSES.map((tag) => (
             <button key={tag} type="button" onClick={() => togglePurpose(tag)} className={chipCls(form.purposeTags.includes(tag))}>
-              {tag}
+              {tag}{PURPOSE_TAG_EMOJI[tag] ? ` ${PURPOSE_TAG_EMOJI[tag]}` : ''}
             </button>
           ))}
         </div>

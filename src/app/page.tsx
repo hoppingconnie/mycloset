@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Sun, CalendarDays, X } from 'lucide-react';
 import {
-  ClothingItem, FeedbackType, OutfitRecord, DEFAULT_PURPOSES, FEEDBACK_CONFIG,
+  ClothingItem, FeedbackType, OutfitRecord, Formality, DEFAULT_PURPOSES,
+  PURPOSE_TAG_EMOJI, FORMALITY_LABELS, FEEDBACK_CONFIG,
 } from '@/types';
 import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
@@ -140,6 +141,7 @@ export default function Home() {
   const [minTemp, setMinTemp] = useState('');
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
   const [allPurposes, setAllPurposes] = useState<string[]>(DEFAULT_PURPOSES);
+  const [selectedFormality, setSelectedFormality] = useState<Formality | null>(null);
   const [record, setRecord]           = useState<OutfitRecord | null>(null);
   const [fallbackLevel, setFallbackLevel] = useState<0 | 1 | 2>(0);
   const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
@@ -243,6 +245,7 @@ export default function Home() {
         maxTemp:  Number(maxTemp),
         minTemp:  Number(minTemp),
         purposes: selectedPurposes,
+        formality: selectedFormality,
         colorRules,
         pastRecords,
       });
@@ -271,6 +274,7 @@ export default function Home() {
         date:      new Date().toISOString().slice(0, 10),
         maxTemp:   Number(maxTemp),
         minTemp:   Number(minTemp),
+        formality: selectedFormality ?? undefined,
         purposes:  selectedPurposes,
         outfits:   outfitsWithPhotos,
         feedbacks: [],
@@ -420,12 +424,46 @@ export default function Home() {
           {weatherMsg && <p className="text-xs text-emerald-600">✓ {weatherMsg}</p>}
         </div>
 
-        {/* 用途タグ */}
+        {/* 今日のシーン: フォーマル度 + 特記事項 */}
         <div>
           <p className="text-sm font-medium text-secondary mb-2">
             今日はどんなシーン？
             <span className="text-muted font-normal ml-1">（任意）</span>
           </p>
+
+          {/* フォーマル度（基本軸） */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setSelectedFormality(null)}
+              className={[
+                'px-3 py-1.5 rounded-full text-sm border transition-colors',
+                selectedFormality === null
+                  ? 'bg-navy text-white border-navy'
+                  : 'border-border-w text-secondary hover:bg-ivory-dark',
+              ].join(' ')}
+            >
+              指定なし
+            </button>
+            {(Object.keys(FORMALITY_LABELS) as Formality[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setSelectedFormality(f)}
+                className={[
+                  'px-3 py-1.5 rounded-full text-sm border transition-colors',
+                  selectedFormality === f
+                    ? 'bg-navy text-white border-navy'
+                    : 'border-border-w text-secondary hover:bg-ivory-dark',
+                ].join(' ')}
+              >
+                {FORMALITY_LABELS[f]}
+              </button>
+            ))}
+          </div>
+
+          {/* 特記事項（用途タグ） */}
+          <p className="text-xs font-medium text-muted mb-2">特記事項</p>
           <div className="flex flex-wrap gap-2">
             {allPurposes.map((p) => (
               <button
@@ -439,7 +477,7 @@ export default function Home() {
                     : 'border-border-w text-secondary hover:bg-ivory-dark',
                 ].join(' ')}
               >
-                {p}
+                {p}{PURPOSE_TAG_EMOJI[p] ? ` ${PURPOSE_TAG_EMOJI[p]}` : ''}
               </button>
             ))}
           </div>
@@ -488,11 +526,16 @@ export default function Home() {
                 厚さ・アウター条件を緩めて提案しました
               </span>
             )}
+            {record.formality && (
+              <span className="text-xs bg-navy-soft text-navy px-2 py-0.5 rounded-full border border-[#D6DCE8]">
+                {FORMALITY_LABELS[record.formality]}
+              </span>
+            )}
             {record.purposes.length > 0 && (
               <div className="flex gap-1 flex-wrap">
                 {record.purposes.map((p) => (
                   <span key={p} className="text-xs bg-navy-soft text-navy px-2 py-0.5 rounded-full border border-[#D6DCE8]">
-                    {p}
+                    {p}{PURPOSE_TAG_EMOJI[p] ? ` ${PURPOSE_TAG_EMOJI[p]}` : ''}
                   </span>
                 ))}
               </div>
