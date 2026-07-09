@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Sun, CalendarDays, X } from 'lucide-react';
 import {
   ClothingItem, FeedbackType, OutfitRecord, Formality, DEFAULT_PURPOSES,
-  PURPOSE_TAG_EMOJI, FORMALITY_LABELS, FEEDBACK_CONFIG,
+  LEGACY_PURPOSES, PURPOSE_TAG_EMOJI, FORMALITY_LABELS, FEEDBACK_CONFIG,
 } from '@/types';
 import { tempMessage, suggestOutfits, Diagnostics } from '@/lib/suggest';
 import { storage } from '@/lib/clientStorage';
@@ -168,7 +168,8 @@ export default function Home() {
   useEffect(() => {
     // 用途タグ一覧
     const clothes: ClothingItem[] = storage.clothes.getAll();
-    const custom = clothes.flatMap((c) => c.purposeTags ?? []);
+    const custom = clothes.flatMap((c) => c.purposeTags ?? [])
+      .filter((t) => !LEGACY_PURPOSES.includes(t));
     setAllPurposes([...new Set([...DEFAULT_PURPOSES, ...custom])]);
 
     // 前日の採用コーデを探す（翌朝フィードバック用）
