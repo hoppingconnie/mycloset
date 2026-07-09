@@ -123,6 +123,12 @@ export const DEFAULT_PURPOSES: string[] = [
   '雨の日', '疲れている日', '気合ブースト',
 ];
 
+/** 旧デフォルトタグ（整理により削除）。既存アイテムに残っていても
+ *  「今日のシーン」の候補一覧には表示しない。 */
+export const LEGACY_PURPOSES: string[] = [
+  '会社', '女友達と外出', '旅行', '学校行事・PTA',
+];
+
 /** デフォルト用途タグの表示装飾（データ上のタグ名には含めない） */
 export const PURPOSE_TAG_EMOJI: Record<string, string> = {
   '気合ブースト': '🔥',
