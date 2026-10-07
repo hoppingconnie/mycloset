@@ -546,7 +546,7 @@ export default function Home() {
           {record.outfits.length === 0 ? (
             <NoOutfitMessage diagnostics={diagnostics} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {record.outfits.map((outfit, i) => (
                 <OutfitCard
                   key={i}

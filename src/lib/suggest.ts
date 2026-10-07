@@ -177,7 +177,7 @@ function scoreOutfit(
   return score;
 }
 
-// ── 多様性を保ちながら上位3件を選択 ──────────────────────────────────────────────
+// ── 多様性を保ちながら上位N件を選択 ──────────────────────────────────────────────
 
 /** 選択済みコーデと共有しているアイテム数を返す */
 function countOverlap(outfit: Outfit, selected: Outfit[]): number {
@@ -190,6 +190,41 @@ function countOverlap(outfit: Outfit, selected: Outfit[]): number {
     }
   }
   return count;
+}
+
+/**
+ * グリーディ選択:
+ *   1件ずつ「既選択との重複アイテム数が最小 → スコアが最大」の順で選ぶ。
+ *   重複が避けられない場合は自然にフォールバックするため、
+ *   服の登録数が少なくても動作する。
+ */
+function selectDiverse(
+  scored: { outfit: Outfit; score: number }[],
+  n: number
+): Outfit[] {
+  const result: Outfit[] = [];
+  const remaining = [...scored];
+
+  while (result.length < n && remaining.length > 0) {
+    let bestIdx = 0;
+    let bestOverlap = countOverlap(remaining[0].outfit, result);
+    let bestScore = remaining[0].score;
+
+    for (let i = 1; i < remaining.length; i++) {
+      const overlap = countOverlap(remaining[i].outfit, result);
+      const score = remaining[i].score;
+      if (overlap < bestOverlap || (overlap === bestOverlap && score > bestScore)) {
+        bestIdx = i;
+        bestOverlap = overlap;
+        bestScore = score;
+      }
+    }
+
+    result.push(remaining[bestIdx].outfit);
+    remaining.splice(bestIdx, 1);
+  }
+
+  return result;
 }
 
 function sample<T>(items: T[]): T | undefined {
@@ -441,12 +476,11 @@ export function suggestOutfits(params: {
     const relaxed = valid.length === 0;
     const ranked  = relaxed ? scored : valid;
 
-    // 1着目: 人気（フィードバック・用途・フォーマル度を反映した一番手堅い組み合わせ）
-    const popular = ranked[0]?.outfit;
-    const outfits: Outfit[] = popular ? [popular] : [];
+    // 1・2着目: 人気（フィードバック・用途・フォーマル度を反映した上位、なるべく被らない2着）
+    const outfits: Outfit[] = selectDiverse(ranked, 2);
 
-    // 2・3着目: 好みのスコアには寄らず、ワードローブ全体から本当にランダムに選出
-    outfits.push(...pickRandomOutfits(info.pools, colorRules, outfits, 3 - outfits.length));
+    // 3・4着目: 好みのスコアには寄らず、ワードローブ全体から本当にランダムに選出
+    outfits.push(...pickRandomOutfits(info.pools, colorRules, outfits, 4 - outfits.length));
 
     return { outfits, relaxed, diagnostics };
   }
