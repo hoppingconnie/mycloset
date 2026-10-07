@@ -41,11 +41,9 @@ function getOutfitItems(outfit: Outfit): ClothingItem[] {
 }
 
 // ── ランダム揺らぎ ─────────────────────────────────────────────────────────────
-// 毎回同じ提案にならないよう、スコアに小さなランダム揺らぎを加える。
-// フィードバック重み（±10〜20）と同程度の範囲にとどめることで、
-// 好みの傾向は活かしつつ、生成するたびに違うコーデが出るようにする。
-const ITEM_JITTER   = 20; // アイテムプール選択時の揺らぎ（± この値）
-const OUTFIT_JITTER = 30; // コーデ最終スコアの揺らぎ（± この値）
+// 候補プール構築時に小さなランダム揺らぎを加え、フィードバックの傾向を
+// 活かしつつ毎回まったく同じ並びにならないようにする。
+const ITEM_JITTER = 20; // アイテムプール選択時の揺らぎ（± この値）
 
 function jitter(range: number): number {
   return (Math.random() - 0.5) * range * 2;
@@ -179,7 +177,7 @@ function scoreOutfit(
   return score;
 }
 
-// ── 多様性を保ちながら上位3件を選択 ──────────────────────────────────────────────
+// ── 多様性を保ちながら上位N件を選択 ──────────────────────────────────────────────
 
 /** 選択済みコーデと共有しているアイテム数を返す */
 function countOverlap(outfit: Outfit, selected: Outfit[]): number {
@@ -229,6 +227,68 @@ function selectDiverse(
   return result;
 }
 
+function sample<T>(items: T[]): T | undefined {
+  if (items.length === 0) return undefined;
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+interface CategoryPools {
+  tops: ClothingItem[];
+  bottoms: ClothingItem[];
+  dresses: ClothingItem[];
+  outers: ClothingItem[];
+  shoes: ClothingItem[];
+  accessories: ClothingItem[];
+}
+
+/**
+ * ワードローブ全体から本当にランダムに n 着選ぶ。
+ * フィードバックスコア・用途タグ・フォーマル度は一切参照しない
+ * （「人気の1着」と対になる、純粋にランダムな枠のため）。
+ * 避けたい色の組み合わせ（ハード制約）だけは除外し、
+ * 既出コーデとのアイテム重複もできるだけ避ける。
+ */
+function pickRandomOutfits(
+  pools: CategoryPools,
+  colorRules: ColorRule[],
+  exclude: Outfit[],
+  n: number,
+): Outfit[] {
+  if (n <= 0) return [];
+  const hasTopBottom = pools.tops.length > 0 && pools.bottoms.length > 0;
+  const hasDress     = pools.dresses.length > 0;
+  if (!hasTopBottom && !hasDress) return [];
+
+  const MAX_ATTEMPTS = 40;
+  const chosen: Outfit[] = [];
+
+  for (let i = 0; i < n; i++) {
+    let best: Outfit | null = null;
+    let bestOverlap = Infinity;
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const useDress = hasDress && (!hasTopBottom || Math.random() < 0.5);
+      const outfit: Outfit = useDress
+        ? { dress: sample(pools.dresses) }
+        : { top: sample(pools.tops), bottom: sample(pools.bottoms) };
+      outfit.outer     = sample(pools.outers);
+      outfit.shoes     = sample(pools.shoes);
+      outfit.accessory = Math.random() < 0.6 ? sample(pools.accessories) : undefined;
+
+      // ハード制約（避けたい色の組み合わせ）だけ確認。好み・用途は無視。
+      if (scoreOutfit(outfit, [], null, colorRules, new Map()) <= HARD_THRESHOLD) continue;
+
+      const overlap = countOverlap(outfit, [...exclude, ...chosen]);
+      if (overlap === 0) { best = outfit; break; }
+      if (overlap < bestOverlap) { best = outfit; bestOverlap = overlap; }
+    }
+
+    if (best) chosen.push(best);
+  }
+
+  return chosen;
+}
+
 // ── 候補生成ヘルパー ───────────────────────────────────────────────────────────
 
 function buildCandidates(
@@ -242,6 +302,7 @@ function buildCandidates(
   minTemp: number,
 ): {
   candidates: Outfit[];
+  pools: CategoryPools;
   topsAll: number;
   topsInTemp: number;
   dressesAll: number;
@@ -326,6 +387,7 @@ function buildCandidates(
 
   return {
     candidates,
+    pools: { tops, bottoms, dresses, outers, shoes, accessories },
     topsAll:         allTops.length,
     topsInTemp:      topsInTemp.length,
     dressesAll:      allDresses.length,
@@ -404,18 +466,23 @@ export function suggestOutfits(params: {
     const scored = info.candidates
       .map((outfit) => ({
         outfit,
-        score: scoreOutfit(outfit, purposes, formality, colorRules, itemScores) + jitter(OUTFIT_JITTER),
+        score: scoreOutfit(outfit, purposes, formality, colorRules, itemScores),
       }))
       .sort((a, b) => b.score - a.score);
 
     const valid = scored.filter((s) => s.score > HARD_THRESHOLD);
     diagnostics.validCandidates = valid.length;
 
-    if (valid.length > 0) {
-      return { outfits: selectDiverse(valid, 3), relaxed: false, diagnostics };
-    } else {
-      return { outfits: selectDiverse(scored, 3), relaxed: true, diagnostics };
-    }
+    const relaxed = valid.length === 0;
+    const ranked  = relaxed ? scored : valid;
+
+    // 1・2着目: 人気（フィードバック・用途・フォーマル度を反映した上位、なるべく被らない2着）
+    const outfits: Outfit[] = selectDiverse(ranked, 2);
+
+    // 3・4着目: 好みのスコアには寄らず、ワードローブ全体から本当にランダムに選出
+    outfits.push(...pickRandomOutfits(info.pools, colorRules, outfits, 4 - outfits.length));
+
+    return { outfits, relaxed, diagnostics };
   }
 
   // Level 0: 通常（気温に合った厚さ + アウター）
